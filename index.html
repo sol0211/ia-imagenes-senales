@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imágenes y Señales para IA</title>
+<!--
+  =====================================================================
+  INFOGRAFÍA INTERACTIVA · PROCESAMIENTO DE IMÁGENES Y SEÑALES PARA IA/ML
+  Ingeniería de Sistemas Computacionales · IX ciclo
+  Archivo único (HTML + CSS + JS). Listo para Google Sites:
+  Insertar › Código embebido › pegar todo este código.
+  Dependencias externas: Tailwind CSS (CDN) y Google Fonts.
+  Fuentes: Gonzalez & Woods (2018); Szeliski (2022); Oppenheim & Schafer (2010);
+           Goodfellow, Bengio & Courville (2016); documentación de scikit-learn y OpenCV.
+  =====================================================================
+-->
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+  if (window.tailwind) tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink: '#0f172a', inst: '#1e3a8a', slate7: '#334155',
+          cyan6: '#0284c7', emer: '#047857', rech: '#c0392b', stat: '#e67e22'
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], serif: ['Source Serif 4', 'Georgia', 'serif'] }
+      }
+    }
+  };
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #f1f5f9; color: #0f172a; overflow-x: hidden; }
+  .serif { font-family: 'Source Serif 4', Georgia, serif; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+  .tab-btn[aria-selected="true"] { background: #1e3a8a; color: #fff; border-color: #1e3a8a; }
+  .tab-btn:focus-visible, button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #0284c7; outline-offset: 2px; }
+  .chip { display:inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .acc-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+  .acc-body > div { overflow: hidden; }
+  .acc.open .acc-body { grid-template-rows: 1fr; }
+  .acc.open .acc-icon { transform: rotate(45deg); }
+  .acc-icon { transition: transform .2s; }
+  .flip { perspective: 1000px; cursor: pointer; }
+  .flip-inner { position: relative; width: 100%; min-height: 200px; transition: transform .5s; transform-style: preserve-3d; }
+  .flip.flipped .flip-inner { transform: rotateY(180deg); }
+  .flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 14px; padding: 16px; display:flex; flex-direction:column; justify-content:center; }
+  .flip-back { transform: rotateY(180deg); }
+  .opt { text-align:left; width:100%; border:1.5px solid #cbd5e1; border-radius:10px; padding:10px 12px; background:#fff; transition: all .15s; }
+  .opt:hover:not([disabled]) { border-color:#0284c7; background:#f0f9ff; }
+  .opt.ok { border-color:#047857; background:#ecfdf5; }
+  .opt.bad { border-color:#c0392b; background:#fef2f2; }
+  .opt[disabled] { cursor: default; }
+  .step-dot { border:1.5px solid #cbd5e1; }
+  .step-dot[aria-current="step"] { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+  .hidden-soft { display:none; }
+  .hidden { display:none; } /* respaldo si Tailwind no carga */
+  table.tbl { width:100%; border-collapse: collapse; font-size: 14px; }
+  table.tbl th { background:#1e3a8a; color:#fff; text-align:center; padding:7px 9px; font-weight:600; }
+  table.tbl td { border-bottom:1px solid #e2e8f0; padding:7px 9px; text-align:center; vertical-align: middle; }
+  table.tbl td.l, table.tbl th.l { text-align:left; }
+  table.tbl tr.tot td { font-weight:700; background:#f8fafc; }
+  table.mini td { padding:3px 5px; font-size:12px; font-variant-numeric: tabular-nums; }
+  .hl { background:#fef3c7; font-weight:700; }
+  .hi { background:#dbeafe; font-weight:700; color:#1e3a8a; }
+  .formula { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.05rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; overflow-x:auto; }
+  .code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; background:#0f172a; color:#e2e8f0; border-radius:10px; padding:12px 14px; overflow-x:auto; white-space: pre; line-height:1.5; }
+  .code .c { color:#94a3b8; } .code .k { color:#7dd3fc; } .code .s { color:#fcd34d; }
+  .sol { display:none; }
+  .sol.show { display:block; }
+  canvas { touch-action: manipulation; }
+  canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; }
+  #cDraw { touch-action: none; cursor: crosshair; }
+  .kin { width: 100%; text-align:center; border:1px solid #cbd5e1; border-radius:6px; padding:4px 2px; font-size:13px; font-variant-numeric: tabular-nums; }
+  .kbtn[aria-pressed="true"] { background:#1e3a8a; color:#fff; border-color:#1e3a8a; }
+  .ratio { position: relative; width: 100%; padding-top: 56.25%; background:#0f172a; border-radius: 12px; overflow: hidden; }
+  .ratio iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .grid8 { display:grid; grid-template-columns: repeat(8, 1fr); gap:2px; }
+  .grid8 div { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; border-radius:3px; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="fixed top-0 left-0 right-0 h-1.5 bg-slate-200 z-40" aria-hidden="true">
+  <div id="progress" class="h-full bg-cyan6 transition-[width] duration-100" style="width:0%"></div>
+</div>
+
+<div class="max-w-6xl mx-auto px-3 sm:px-5 py-5 space-y-6">
+
+  <!-- =========================================================
+       ENCABEZADO
+       ========================================================= -->
+  <header class="rounded-2xl overflow-hidden text-white" style="background: linear-gradient(135deg,#0f172a 0%,#1e3a8a 65%,#0284c7 130%);">
+    <div class="p-5 sm:p-8">
+      <div class="flex flex-wrap gap-2 mb-3">
+        <span class="chip bg-white/15">Inteligencia Artificial y ML</span>
+        <span class="chip bg-white/15">Pregrado · IX ciclo</span>
+        <span class="chip bg-white/15">Laboratorio visual</span>
+        <span class="chip bg-emerald-500/30">Ingeniería de Sistemas Computacionales</span>
+      </div>
+      <h1 class="serif text-3xl sm:text-4xl font-bold leading-tight">Imágenes y señales: de los píxeles a la predicción</h1>
+      <p class="mt-2 text-slate-200 max-w-3xl">Un modelo de Machine Learning nunca «ve» una foto ni «escucha» un sonido: recibe una matriz de números. Aquí aprenderás a prepararla, a extraer características útiles y a clasificar, con laboratorios que puedes manipular.</p>
+      <div class="grid sm:grid-cols-2 gap-3 mt-5">
+        <div class="bg-white/10 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wider text-cyan-200 font-semibold">Competencia</p>
+          <p class="mt-1">Diseña e implementa un pipeline de visión computacional o de procesamiento de señales que transforme datos crudos en decisiones automáticas evaluadas con métricas adecuadas.</p>
+        </div>
+        <div class="bg-white/10 rounded-xl p-4">
+          <p class="text-xs uppercase tracking-wider text-cyan-200 font-semibold">Objetivos de la sesión</p>
+          <p class="mt-1">Representar imágenes y señales como datos; aplicar filtros (convolución) y la FFT; extraer características; clasificar con k-NN; evaluar con matriz de confusión y comunicar el resultado al negocio.</p>
+        </div>
+      </div>
+      <nav aria-label="Índice" class="mt-5 flex flex-wrap gap-2 text-sm">
+        <a href="#marco" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">1 · Marco conceptual</a>
+        <a href="#laboratorio" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">2 · Laboratorio</a>
+        <a href="#ejemplo" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">3 · Ejemplo resuelto</a>
+        <a href="#dataset" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">4 · Dataset real</a>
+        <a href="#caso" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">5 · Caso guiado</a>
+        <a href="#ejercicios" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">6 · Ejercicios</a>
+        <a href="#quiz" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">7 · Autoevaluación</a>
+        <a href="#errores" class="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25">8 · Errores frecuentes</a>
+        <button id="btnCopy" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-semibold">📋 Copiar resumen</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- =========================================================
+       1. MARCO CONCEPTUAL
+       ========================================================= -->
+  <section id="marco" class="card p-4 sm:p-6" aria-labelledby="t-marco">
+    <h2 id="t-marco" class="serif text-2xl font-bold text-inst">1 · Marco conceptual</h2>
+    <p class="text-slate-600 text-sm mt-1">Explora cada pestaña. Usa las flechas ← → del teclado para moverte entre pestañas.</p>
+
+    <div role="tablist" aria-label="Marco conceptual" class="flex flex-wrap gap-2 mt-4" id="tabsMarco">
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="true" aria-controls="p-conceptos" id="tab-conceptos">a) Conceptos</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-tipos" id="tab-tipos" tabindex="-1">b) ¿Imagen o señal?</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-pasos" id="tab-pasos" tabindex="-1">c) Pipeline de 7 pasos</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-feat" id="tab-feat" tabindex="-1">d) Características</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-metr" id="tab-metr" tabindex="-1">e) Métricas</button>
+    </div>
+
+    <!-- a) Conceptos -->
+    <div role="tabpanel" id="p-conceptos" aria-labelledby="tab-conceptos" class="mt-5">
+      <div class="grid lg:grid-cols-2 gap-5">
+        <div class="space-y-2" id="accConceptos"></div>
+        <div>
+          <p class="font-semibold text-slate7 mb-2">Las dos ecuaciones de la unidad</p>
+          <div class="formula text-center">(I ⋆ K)(x, y) = Σ<sub>i</sub> Σ<sub>j</sub> I(x + i, y + j) · K(i, j)</div>
+          <div class="formula text-center mt-2">X[k] = Σ<sub>n=0</sub><sup>N−1</sup> x[n] · e<sup>−j2πkn/N</sup></div>
+          <div class="overflow-x-auto mt-3">
+          <table class="tbl">
+            <thead><tr><th class="l">Símbolo</th><th class="l">Nombre</th><th class="l">Pregunta que responde</th></tr></thead>
+            <tbody>
+              <tr><td class="l">I(x, y)</td><td class="l">Imagen (intensidad del píxel)</td><td class="l">¿Qué tan claro es el punto (x, y)?</td></tr>
+              <tr><td class="l">K(i, j)</td><td class="l">Kernel o filtro 3×3</td><td class="l">¿Qué patrón local estoy buscando?</td></tr>
+              <tr><td class="l">I ⋆ K</td><td class="l">Mapa de respuesta (feature map)</td><td class="l">¿Dónde aparece ese patrón en la imagen?</td></tr>
+              <tr><td class="l">x[n]</td><td class="l">Señal muestreada</td><td class="l">¿Cuánto vale el sensor en la muestra n?</td></tr>
+              <tr><td class="l">X[k]</td><td class="l">Transformada discreta de Fourier</td><td class="l">¿Cuánta energía hay en la frecuencia k·fs/N?</td></tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="mt-4 rounded-xl border-l-4 border-cyan6 bg-sky-50 p-4 text-sm">
+            <p class="font-semibold text-inst">Analogía de la plantilla</p>
+            <p class="mt-1">Un kernel es como una <b>plantilla de cartón con agujeros</b> que deslizas sobre una foto impresa. En cada posición sumas lo que ves a través de los agujeros (ponderado). Donde la foto «se parece» a la plantilla, la suma es grande. Una CNN hace exactamente eso, pero <b>aprende</b> qué plantillas usar.</p>
+          </div>
+          <div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm"><b>Regla de oro:</b> el modelo solo ve números. El trabajo del ingeniero es convertir la matriz cruda en un <b>vector de características</b> que separe bien las clases, sin filtrar información del conjunto de prueba.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- b) Imagen o señal -->
+    <div role="tabpanel" id="p-tipos" aria-labelledby="tab-tipos" class="mt-5 hidden">
+      <div class="overflow-x-auto">
+      <table class="tbl">
+        <thead><tr><th class="l">Tipo de dato</th><th>Forma (tensor)</th><th class="l">Ejemplo de negocio</th><th class="l">Características clásicas</th><th class="l">Modelo típico</th></tr></thead>
+        <tbody>
+          <tr><td class="l font-semibold">Señal 1D</td><td>N</td><td class="l">Vibración de un motor, ECG, consumo eléctrico</td><td class="l">RMS, curtosis, FFT por bandas</td><td class="l">Random Forest, SVM, CNN 1D</td></tr>
+          <tr><td class="l font-semibold">Imagen en gris</td><td>H × W</td><td class="l">Radiografía, inspección de soldaduras</td><td class="l">Bordes, histograma, HOG, LBP</td><td class="l">SVM, CNN 2D</td></tr>
+          <tr><td class="l font-semibold">Imagen a color</td><td>H × W × 3</td><td class="l">Calibre de fruta en agroexportación</td><td class="l">Color HSV, textura, forma</td><td class="l">CNN 2D (transfer learning)</td></tr>
+          <tr><td class="l font-semibold">Espectrograma</td><td>F × T</td><td class="l">Comandos de voz, ruido de una bomba</td><td class="l">MFCC, bandas de energía</td><td class="l">CNN 2D (¡se trata como imagen!)</td></tr>
+          <tr><td class="l font-semibold">Video</td><td>T × H × W × 3</td><td class="l">Conteo de vehículos, seguridad</td><td class="l">Diferencia de cuadros, flujo óptico</td><td class="l">CNN 3D, CNN + LSTM</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="mt-4 font-semibold text-slate7">Practica: ¿qué representación conviene?</p>
+      <div id="miniTipo" class="grid sm:grid-cols-3 gap-3 mt-2"></div>
+    </div>
+
+    <!-- c) Pipeline -->
+    <div role="tabpanel" id="p-pasos" aria-labelledby="tab-pasos" class="mt-5 hidden">
+      <ol id="stepDots" class="flex flex-wrap gap-2" aria-label="Pasos"></ol>
+      <div id="stepBody" class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 min-h-[150px]" aria-live="polite"></div>
+      <div class="flex justify-between mt-3">
+        <button id="stepPrev" class="px-3 py-2 rounded-lg border border-slate-300 text-sm">← Anterior</button>
+        <button id="stepNext" class="px-3 py-2 rounded-lg bg-inst text-white text-sm font-semibold">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- d) Características -->
+    <div role="tabpanel" id="p-feat" aria-labelledby="tab-feat" class="mt-5 hidden">
+      <div class="overflow-x-auto">
+      <table class="tbl">
+        <thead><tr><th class="l"></th><th class="l">Características clásicas (hand-crafted)</th><th class="l">Características aprendidas (deep learning)</th></tr></thead>
+        <tbody>
+          <tr><td class="l font-semibold">¿Quién las diseña?</td><td class="l">El ingeniero (Sobel, HOG, FFT, RMS…)</td><td class="l">La red: los kernels de la CNN se ajustan con descenso de gradiente</td></tr>
+          <tr><td class="l font-semibold">Datos necesarios</td><td class="l">Cientos de ejemplos pueden bastar</td><td class="l">Miles o más (o transfer learning)</td></tr>
+          <tr><td class="l font-semibold">Interpretabilidad</td><td class="l">Alta: «densidad de bordes = 0.40»</td><td class="l">Baja: requiere Grad-CAM, mapas de saliencia</td></tr>
+          <tr><td class="l font-semibold">Cómputo</td><td class="l">Bajo: corre en un microcontrolador</td><td class="l">Alto: GPU para entrenar; edge con modelos ligeros</td></tr>
+          <tr><td class="l font-semibold">Úsalo cuando…</td><td class="l">El entorno es controlado (luz fija, cámara fija) y hay pocos datos</td><td class="l">Hay mucha variabilidad (fondos, poses, iluminación) y datos suficientes</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 text-sm">
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-inst">Histograma</p><p class="mt-1">Distribución de intensidades. Resume brillo y contraste; base para umbralizar (Otsu).</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-inst">Bordes (Sobel, Canny)</p><p class="mt-1">Cambios bruscos de intensidad = contornos. Densidad de bordes ≈ textura o grietas.</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-inst">HOG</p><p class="mt-1">Histograma de orientaciones del gradiente por celdas (Dalal &amp; Triggs, 2005). Clásico para detectar personas.</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-inst">LBP</p><p class="mt-1">Local Binary Patterns: compara cada píxel con sus 8 vecinos → código de textura (Ojala et al., 2002).</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-stat">Estadísticos de señal</p><p class="mt-1">Media, RMS (energía), pico, factor de cresta, curtosis (impactos).</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-stat">FFT por bandas</p><p class="mt-1">Energía en rangos de frecuencia: una falla de rodamiento «suena» en una banda específica.</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-stat">Espectrograma / MFCC</p><p class="mt-1">FFT en ventanas sucesivas → mapa tiempo-frecuencia. MFCC imita la percepción humana del sonido.</p></div>
+        <div class="rounded-xl border border-slate-200 p-3"><p class="font-bold text-emer">Embeddings de CNN</p><p class="mt-1">Vector de la penúltima capa de una red preentrenada (ResNet, EfficientNet). Excelente punto de partida.</p></div>
+      </div>
+    </div>
+
+    <!-- e) Métricas -->
+    <div role="tabpanel" id="p-metr" aria-labelledby="tab-metr" class="mt-5 hidden">
+      <div class="grid lg:grid-cols-2 gap-5">
+        <div>
+          <p class="font-semibold text-slate7 mb-2">Matriz de confusión interactiva (clase positiva = «defecto»)</p>
+          <table class="tbl">
+            <thead><tr><th></th><th>Predice: Defecto</th><th>Predice: OK</th></tr></thead>
+            <tbody>
+              <tr><td class="font-semibold">Real: Defecto</td><td><label class="text-xs text-emer font-semibold">VP<input id="mTP" type="number" min="0" value="40" class="kin mt-1"></label></td><td><label class="text-xs text-rech font-semibold">FN<input id="mFN" type="number" min="0" value="10" class="kin mt-1"></label></td></tr>
+              <tr><td class="font-semibold">Real: OK</td><td><label class="text-xs text-rech font-semibold">FP<input id="mFP" type="number" min="0" value="30" class="kin mt-1"></label></td><td><label class="text-xs text-emer font-semibold">VN<input id="mTN" type="number" min="0" value="920" class="kin mt-1"></label></td></tr>
+            </tbody>
+          </table>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3" id="mOut" aria-live="polite"></div>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div class="formula text-sm">Exactitud = (VP + VN) / Total<br>Precisión = VP / (VP + FP) &nbsp;·&nbsp; «de lo que alarmé, ¿cuánto era real?»<br>Sensibilidad (recall) = VP / (VP + FN) &nbsp;·&nbsp; «de los defectos reales, ¿cuántos atrapé?»<br>F1 = 2 · P · R / (P + R)</div>
+          <div class="rounded-xl bg-amber-50 border border-amber-200 p-3"><b>Trampa clásica:</b> con 5% de defectos, un modelo que dice siempre «OK» tiene 95% de exactitud y 0% de sensibilidad. Prueba poniendo VP = 0, FN = 50, FP = 0, VN = 950.</div>
+          <div class="rounded-xl border-l-4 border-cyan6 bg-sky-50 p-3"><p class="font-semibold text-inst">¿Qué métrica elijo?</p><p class="mt-1">Si dejar pasar un defecto es caro (salud, minería, aviación) → prioriza <b>recall</b>. Si cada falsa alarma detiene la línea → cuida la <b>precisión</b>. El costo de cada error lo define el negocio, no el algoritmo.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       2. LABORATORIO
+       ========================================================= -->
+  <section id="laboratorio" class="card p-4 sm:p-6" aria-labelledby="t-lab">
+    <h2 id="t-lab" class="serif text-2xl font-bold text-inst">2 · Laboratorio interactivo</h2>
+    <p class="text-slate-600 text-sm mt-1">Mueve los controles, haz clic sobre las imágenes y dibuja. Todo se calcula en tu navegador, con las mismas operaciones que usan OpenCV, NumPy y scikit-learn.</p>
+
+    <div role="tablist" aria-label="Laboratorio" class="flex flex-wrap gap-2 mt-4" id="tabsLab">
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="true" aria-controls="p-img" id="tab-img">a) Imagen = matriz</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-conv" id="tab-conv" tabindex="-1">b) Filtros y convolución</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-sig" id="tab-sig" tabindex="-1">c) Señales y Fourier</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-knn" id="tab-knn" tabindex="-1">d) Clasificador k-NN</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-draw" id="tab-draw" tabindex="-1">e) Dibuja un dígito</button>
+      <button role="tab" class="tab-btn px-3 py-2 rounded-lg border border-slate-300 text-sm font-semibold" aria-selected="false" aria-controls="p-videos" id="tab-videos" tabindex="-1">f) Videos de apoyo</button>
+    </div>
+
+    <!-- a) Imagen = matriz -->
+    <div role="tabpanel" id="p-img" aria-labelledby="tab-img" class="mt-4">
+      <div class="grid lg:grid-cols-2 gap-5">
+        <div>
+          <canvas id="cImg" width="384" height="384" class="pix w-full rounded-xl border border-slate-200 cursor-crosshair" style="max-width:384px;aspect-ratio:1" role="img" aria-label="Imagen sintética de 64 por 64 píxeles en escala de grises"></canvas>
+          <p class="text-xs text-slate-500 mt-1">Imagen sintética de 64 × 64 píxeles (4 096 números). <b>Haz clic</b> en cualquier punto para ver sus valores.</p>
+          <p class="font-semibold text-slate7 text-sm mt-3 mb-1">Vecindario 5 × 5 alrededor del píxel elegido <span id="selTxt" class="text-stat"></span></p>
+          <div class="overflow-x-auto"><table class="tbl mini" id="zoomTbl"></table></div>
+        </div>
+        <div class="space-y-3">
+          <div class="grid sm:grid-cols-2 gap-3">
+            <div><label class="block text-sm font-semibold mb-1" for="nzA">Ruido del sensor: <span id="nzAo" class="text-stat"></span></label><input id="nzA" type="range" min="0" max="60" step="1" value="10" class="w-full accent-orange-500"></div>
+            <div><label class="block text-sm font-semibold mb-1" for="brS">Brillo (+b): <span id="brSo" class="text-stat"></span></label><input id="brS" type="range" min="-100" max="100" step="1" value="0" class="w-full accent-orange-500"></div>
+            <div><label class="block text-sm font-semibold mb-1" for="ctS">Contraste (×c): <span id="ctSo" class="text-stat"></span></label><input id="ctS" type="range" min="0.2" max="3" step="0.1" value="1" class="w-full accent-orange-500"></div>
+            <div><label class="block text-sm font-semibold mb-1" for="tS">Umbral t: <span id="tSo" class="text-stat"></span></label><input id="tS" type="range" min="0" max="255" step="1" value="128" class="w-full accent-orange-500"></div>
+          </div>
+          <div class="flex flex-wrap gap-4 text-sm">
+            <label class="flex items-center gap-2"><input id="invC" type="checkbox"> Invertir (255 − v)</label>
+            <label class="flex items-center gap-2"><input id="thC" type="checkbox"> Binarizar (v ≥ t → 255)</label>
+          </div>
+          <div class="formula text-sm">v' = c · (v − 128) + 128 + b &nbsp;→&nbsp; recortar a [0, 255]</div>
+          <div class="w-full rounded-xl border border-slate-200 bg-white"><canvas id="cHist" class="w-full block" style="height:150px" role="img" aria-label="Histograma de intensidades"></canvas></div>
+          <p id="histTxt" class="text-sm text-slate-700" aria-live="polite"></p>
+          <div class="rounded-xl border border-slate-200 p-3">
+            <p class="font-semibold text-inst text-sm">Mini-lab: un píxel a color son 3 números</p>
+            <div class="grid grid-cols-[1fr_auto] gap-3 items-center mt-2">
+              <div class="space-y-1 text-xs">
+                <label class="flex items-center gap-2">R <input id="cR" type="range" min="0" max="255" value="200" class="w-full accent-red-600"></label>
+                <label class="flex items-center gap-2">G <input id="cG" type="range" min="0" max="255" value="100" class="w-full accent-green-600"></label>
+                <label class="flex items-center gap-2">B <input id="cB" type="range" min="0" max="255" value="50" class="w-full accent-blue-600"></label>
+              </div>
+              <div class="flex gap-2"><div id="swC" class="w-14 h-14 rounded-lg border"></div><div id="swG" class="w-14 h-14 rounded-lg border"></div></div>
+            </div>
+            <p id="rgbTxt" class="text-xs mt-2 text-slate-700"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- b) Convolución -->
+    <div role="tabpanel" id="p-conv" aria-labelledby="tab-conv" class="mt-4 hidden">
+      <div class="flex flex-wrap gap-2" id="kerBtns"></div>
+      <div class="grid lg:grid-cols-[220px_1fr] gap-5 mt-4">
+        <div class="space-y-3">
+          <p class="text-sm font-semibold">Kernel K (3 × 3) · editable</p>
+          <div class="grid grid-cols-3 gap-1.5" id="kerIn"></div>
+          <p id="kerDesc" class="text-sm text-slate-700"></p>
+          <div><label class="block text-sm font-semibold mb-1" for="nzB">Ruido: <span id="nzBo" class="text-stat"></span></label><input id="nzB" type="range" min="0" max="60" step="1" value="10" class="w-full accent-orange-500"></div>
+        </div>
+        <div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><p class="text-xs font-semibold text-slate-500 mb-1">Original I (64 × 64) · clic para elegir un píxel</p><canvas id="cOrig" width="320" height="320" class="pix w-full rounded-xl border border-slate-200 cursor-crosshair" style="aspect-ratio:1" role="img" aria-label="Imagen original"></canvas></div>
+            <div><p class="text-xs font-semibold text-slate-500 mb-1">Salida I ⋆ K (62 × 62, sin padding)</p><canvas id="cFilt" width="320" height="320" class="pix w-full rounded-xl border border-slate-200" style="aspect-ratio:1" role="img" aria-label="Imagen filtrada"></canvas></div>
+          </div>
+          <div id="convCalc" class="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm overflow-x-auto" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- c) Señales -->
+    <div role="tabpanel" id="p-sig" aria-labelledby="tab-sig" class="mt-4 hidden">
+      <div class="grid lg:grid-cols-[290px_1fr] gap-5">
+        <div class="space-y-3">
+          <div><label class="block text-sm font-semibold mb-1" for="fsS">Frecuencia de muestreo fs: <span id="fsSo" class="text-stat"></span></label><input id="fsS" type="range" min="40" max="1000" step="10" value="500" class="w-full accent-orange-500"></div>
+          <div><label class="block text-sm font-semibold mb-1" for="f1S">Componente 1, f₁ (amplitud 1): <span id="f1So" class="text-stat"></span></label><input id="f1S" type="range" min="1" max="250" step="1" value="50" class="w-full accent-orange-500"></div>
+          <div><label class="block text-sm font-semibold mb-1" for="f2S">Componente 2, f₂ (amplitud 0.5): <span id="f2So" class="text-stat"></span></label><input id="f2S" type="range" min="0" max="250" step="1" value="120" class="w-full accent-orange-500"></div>
+          <div><label class="block text-sm font-semibold mb-1" for="nzS">Ruido: <span id="nzSo" class="text-stat"></span></label><input id="nzS" type="range" min="0" max="1" step="0.05" value="0.2" class="w-full accent-orange-500"></div>
+          <div><label class="block text-sm font-semibold mb-1" for="maS">Filtro de media móvil (ventana w): <span id="maSo" class="text-stat"></span></label><input id="maS" type="range" min="1" max="15" step="1" value="1" class="w-full accent-orange-500"></div>
+          <div class="formula text-sm">x[n] = sen(2π f₁ n/fs) + 0.5·sen(2π f₂ n/fs) + ruido<br>N = 256 muestras · Δf = fs / N</div>
+          <div id="aliasBox" class="rounded-xl p-3 text-sm" aria-live="polite"></div>
+        </div>
+        <div>
+          <p class="text-xs font-semibold text-slate-500 mb-1">Dominio del tiempo (primeras 128 muestras). Gris: señal analógica real · Azul: lo que ve la computadora</p>
+          <div class="w-full rounded-xl border border-slate-200 bg-white"><canvas id="cTime" class="w-full block" style="height:200px" role="img" aria-label="Señal en el tiempo"></canvas></div>
+          <p class="text-xs font-semibold text-slate-500 mb-1 mt-3">Dominio de la frecuencia: |X[k]| de 0 a fs/2 (límite de Nyquist)</p>
+          <div class="w-full rounded-xl border border-slate-200 bg-white"><canvas id="cFreq" class="w-full block" style="height:200px" role="img" aria-label="Espectro de magnitud"></canvas></div>
+          <p class="font-semibold text-sm mt-3 mb-1">Vector de características extraído (lo que recibiría el clasificador)</p>
+          <div class="grid grid-cols-3 md:grid-cols-6 gap-2" id="sigFeat" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- d) k-NN -->
+    <div role="tabpanel" id="p-knn" aria-labelledby="tab-knn" class="mt-4 hidden">
+      <div class="grid lg:grid-cols-[290px_1fr] gap-5">
+        <div class="space-y-3">
+          <div class="rounded-xl bg-slate-50 border p-3 text-sm">Cada punto es una <b>pieza</b> fotografiada en la línea. De su imagen se extrajeron 2 características: <b>x₁ = brillo medio</b> y <b>x₂ = densidad de bordes</b> (ambas en [0, 1]). <b>Haz clic</b> en el plano para ubicar una pieza nueva.</div>
+          <div><label class="block text-sm font-semibold mb-1" for="kS">Vecinos k: <span id="kSo" class="text-stat"></span></label><input id="kS" type="range" min="1" max="15" step="2" value="3" class="w-full accent-orange-500"></div>
+          <div class="flex flex-col gap-2 text-sm">
+            <label class="flex items-center gap-2"><input id="smallC" type="checkbox"> Usar solo las 6 piezas del ejemplo resuelto</label>
+            <label class="flex items-center gap-2"><input id="regC" type="checkbox" checked> Pintar regiones de decisión</label>
+          </div>
+          <div class="formula text-sm">d(p, q) = √[(p₁ − q₁)² + (p₂ − q₂)²]<br>Clase = voto mayoritario de los k más cercanos</div>
+          <div id="knnOut" class="rounded-xl p-3 text-sm border" aria-live="polite"></div>
+        </div>
+        <div>
+          <div class="w-full rounded-xl border border-slate-200 bg-white"><canvas id="cKnn" class="w-full block cursor-crosshair" style="height:380px" role="img" aria-label="Plano de características con clasificador k vecinos"></canvas></div>
+          <div class="overflow-x-auto mt-3"><table class="tbl" id="knnTbl"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- e) Dibuja un dígito -->
+    <div role="tabpanel" id="p-draw" aria-labelledby="tab-draw" class="mt-4 hidden">
+      <div class="grid md:grid-cols-[220px_200px_1fr] gap-5 items-start">
+        <div>
+          <p class="text-sm font-semibold mb-1">1 · Dibuja un dígito (0–9)</p>
+          <canvas id="cDraw" width="200" height="200" class="w-full rounded-xl border-2 border-slate-300 bg-white" style="max-width:200px;aspect-ratio:1" aria-label="Lienzo para dibujar un dígito"></canvas>
+          <div class="flex gap-2 mt-2">
+            <button id="drClear" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm">Borrar</button>
+            <button id="drDemo" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm">Ejemplo</button>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold mb-1">2 · Lo que ve el modelo (16 × 16)</p>
+          <canvas id="cVec" width="160" height="160" class="pix w-full rounded-xl border border-slate-200 bg-white" style="max-width:160px;aspect-ratio:1" role="img" aria-label="Imagen reducida a 16 por 16"></canvas>
+          <p class="text-xs text-slate-500 mt-1">Recorte al contorno, centrado, reducción a 16 × 16 y escala [0, 1] → vector de <b>256</b> características.</p>
+        </div>
+        <div>
+          <p class="text-sm font-semibold mb-1">3 · Predicción (similitud coseno con plantillas)</p>
+          <div id="drOut" class="space-y-2" aria-live="polite"><p class="text-sm text-slate-500">Dibuja un número grande y claro en el lienzo.</p></div>
+          <div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm">Este es un <b>1-NN por plantillas</b>: compara tu dibujo con dígitos generados con 6 tipografías. Fallará con trazos poco comunes. <b>Pregunta:</b> ¿qué ganaríamos entrenando con miles de dígitos manuscritos reales (MNIST) y una CNN?</div>
+          <div class="formula text-sm mt-3">sim(a, b) = (a · b) / (‖a‖ ‖b‖) ∈ [0, 1]</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- f) Videos -->
+    <div role="tabpanel" id="p-videos" aria-labelledby="tab-videos" class="mt-4 hidden">
+      <div class="grid lg:grid-cols-2 gap-5">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-cyan6 font-semibold">Video 1 · Convolución</p>
+          <p class="font-semibold text-inst">But what is a convolution? (3Blue1Brown)</p>
+          <p class="text-xs text-slate-500 mb-2">En inglés, con subtítulos automáticos en español. Desenfoque y detección de bordes como convoluciones.</p>
+          <div class="ratio"><iframe class="ytFrame" data-src="https://www.youtube-nocookie.com/embed/KuXjwB4LzSA" title="Video: But what is a convolution?" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+          <a class="inline-block mt-2 text-xs font-semibold text-cyan6" href="https://www.youtube.com/watch?v=KuXjwB4LzSA" target="_blank" rel="noopener">Ver en YouTube ↗</a>
+          <div class="mt-3 rounded-xl bg-sky-50 border border-sky-200 p-3 text-sm"><p class="font-semibold text-inst">Mientras lo ves, fíjate en…</p><ul class="list-disc ml-5 mt-1 space-y-0.5"><li>Por qué un kernel de unos (normalizado) desenfoca.</li><li>Cómo un kernel con números positivos y negativos detecta bordes.</li><li>La relación con el laboratorio b).</li></ul></div>
+        </div>
+        <div>
+          <p class="text-xs uppercase tracking-wider text-cyan6 font-semibold">Video 2 · Transformada de Fourier</p>
+          <p class="font-semibold text-inst">But what is the Fourier Transform? A visual introduction (3Blue1Brown)</p>
+          <p class="text-xs text-slate-500 mb-2">En inglés, con subtítulos. Intuición de «enrollar» la señal para encontrar sus frecuencias.</p>
+          <div class="ratio"><iframe class="ytFrame" data-src="https://www.youtube-nocookie.com/embed/spUNpyF58BY" title="Video: But what is the Fourier Transform?" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>
+          <a class="inline-block mt-2 text-xs font-semibold text-cyan6" href="https://www.youtube.com/watch?v=spUNpyF58BY" target="_blank" rel="noopener">Ver en YouTube ↗</a>
+          <div class="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm"><p class="font-semibold text-amber-800">Lectura crítica</p><p class="mt-1">El video usa la transformada continua. En el laboratorio c) usamos la <b>discreta</b> (DFT/FFT): solo ve frecuencias hasta fs/2 y con resolución fs/N.</p></div>
+        </div>
+      </div>
+      <p class="font-semibold mt-5 mb-2">Preguntas detonantes</p>
+      <div class="grid md:grid-cols-2 gap-2" id="qVideos"></div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       3. EJEMPLO RESUELTO
+       ========================================================= -->
+  <section id="ejemplo" class="card p-4 sm:p-6" aria-labelledby="t-ej">
+    <h2 id="t-ej" class="serif text-2xl font-bold text-inst">3 · Ejemplo resuelto paso a paso: inspección visual de piezas</h2>
+    <div class="mt-3 rounded-xl p-4 text-white" style="background:#334155">
+      <p><b>Envases del Sur</b> fabrica tapas metálicas. Una cámara en escala de grises fotografía cada tapa en la faja. Queremos un sistema que decida <b>OK / Defecto</b> en milisegundos. Seguiremos todo el pipeline a mano: matriz → normalización → convolución → bordes → características → k-NN → decisión.</p>
+    </div>
+    <ol id="ejDots" class="flex flex-wrap gap-2 mt-4" aria-label="Pasos del ejemplo"></ol>
+    <div id="ejBody" class="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 min-h-[260px]" aria-live="polite"></div>
+    <div class="flex justify-between mt-3">
+      <button id="ejPrev" class="px-3 py-2 rounded-lg border border-slate-300 text-sm">← Anterior</button>
+      <button id="ejNext" class="px-3 py-2 rounded-lg bg-inst text-white text-sm font-semibold">Siguiente →</button>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       4. DATASET REAL
+       ========================================================= -->
+  <section id="dataset" class="card p-4 sm:p-6" aria-labelledby="t-ds">
+    <h2 id="t-ds" class="serif text-2xl font-bold text-inst">4 · Del laboratorio al dataset real: dígitos manuscritos</h2>
+    <p class="text-sm text-slate-600 mt-1">Dataset <b>Optical Recognition of Handwritten Digits</b> (UCI), incluido en scikit-learn como <code>load_digits</code>: 1 797 imágenes de 8 × 8 píxeles, intensidades de 0 a 16, 10 clases (0–9). Es el «hola mundo» de la visión computacional antes de MNIST (28 × 28, 70 000 imágenes).</p>
+    <div class="grid lg:grid-cols-[300px_1fr] gap-5 mt-4">
+      <div>
+        <p class="font-semibold text-slate7 mb-2 text-sm">Una imagen del dataset (dígito 0) · pasa el cursor</p>
+        <div class="grid8" id="digGrid"></div>
+        <p id="digTxt" class="text-sm mt-2 text-slate-700 min-h-[40px]">Cada celda es una característica. Aplanada, la imagen es un vector x ∈ ℝ⁶⁴.</p>
+      </div>
+      <div class="space-y-3">
+        <p class="font-semibold text-slate7 text-sm">Pipeline mínimo en Python (scikit-learn)</p>
+<div class="code"><span class="k">from</span> sklearn.datasets <span class="k">import</span> load_digits
+<span class="k">from</span> sklearn.model_selection <span class="k">import</span> train_test_split
+<span class="k">from</span> sklearn.pipeline <span class="k">import</span> make_pipeline
+<span class="k">from</span> sklearn.preprocessing <span class="k">import</span> StandardScaler
+<span class="k">from</span> sklearn.neighbors <span class="k">import</span> KNeighborsClassifier
+<span class="k">from</span> sklearn.metrics <span class="k">import</span> classification_report, confusion_matrix
+
+X, y = load_digits(return_X_y=<span class="k">True</span>)          <span class="c"># X: (1797, 64)  y: (1797,)</span>
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y, test_size=<span class="s">0.25</span>, stratify=y, random_state=<span class="s">42</span>)
+
+modelo = make_pipeline(StandardScaler(),         <span class="c"># se ajusta SOLO con train</span>
+                       KNeighborsClassifier(n_neighbors=<span class="s">3</span>))
+modelo.fit(X_tr, y_tr)
+y_pred = modelo.predict(X_te)
+print(classification_report(y_te, y_pred))
+print(confusion_matrix(y_te, y_pred))</div>
+        <div class="overflow-x-auto">
+          <table class="tbl">
+            <thead><tr><th class="l">Etapa</th><th class="l">Qué hace</th><th class="l">Por qué importa</th></tr></thead>
+            <tbody>
+              <tr><td class="l">reshape / aplanar</td><td class="l">8 × 8 → vector de 64</td><td class="l">Los modelos clásicos esperan una fila por ejemplo</td></tr>
+              <tr><td class="l">stratify</td><td class="l">Misma proporción de cada dígito en train y test</td><td class="l">Evaluación justa</td></tr>
+              <tr><td class="l">Pipeline + StandardScaler</td><td class="l">Escala con media y desviación de train</td><td class="l">Evita fuga de información (data leakage)</td></tr>
+              <tr><td class="l">confusion_matrix</td><td class="l">Cuenta aciertos y confusiones por clase</td><td class="l">Muestra qué pares se confunden (p. ej., 8 con 1 o 9)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="rounded-xl bg-sky-50 border border-sky-200 p-3 text-sm"><b>Referencia:</b> el ejemplo oficial de scikit-learn «Recognizing hand-written digits» (SVM) alcanza alrededor de 97% de exactitud. Con imágenes más grandes y variables (fotos reales) los métodos clásicos se quedan cortos y entra la <b>CNN</b>: capas de convolución que aprenden los kernels del laboratorio b).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       5. CASO GUIADO
+       ========================================================= -->
+  <section id="caso" class="card p-4 sm:p-6" aria-labelledby="t-caso">
+    <h2 id="t-caso" class="serif text-2xl font-bold text-inst">5 · Caso guiado: mantenimiento predictivo en Minera Altiplano</h2>
+    <div class="mt-3 rounded-xl p-4 text-white" style="background:#334155">
+      <p>Una faja transportadora de mineral tiene <b>40 motores</b>. Cada parada no programada cuesta horas de producción. Se instalan acelerómetros que registran vibración. Ingeniería indica que las fallas de rodamiento generan picos de vibración en frecuencias de <b>hasta 400 Hz</b>. Históricamente, solo el <b>2%</b> de las ventanas registradas corresponden a una falla incipiente. Tú eres el ingeniero de ML: responde para desbloquear cada paso.</p>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-4 mt-4 text-sm">
+      <div class="rounded-xl bg-slate-50 border p-3">
+        <p class="font-semibold text-slate7">Ficha técnica del sensor</p>
+        <p class="mt-1">Frecuencia de muestreo: <b>fs = 1 000 Hz</b> · Ventana de análisis: <b>1 s</b> (N = 1 000 muestras)</p>
+        <p class="mt-1">Datos históricos: 50 000 ventanas etiquetadas por mantenimiento (1 000 con falla).</p>
+      </div>
+      <div class="rounded-xl bg-slate-50 border p-3">
+        <p class="font-semibold text-slate7">Resultado del modelo en test (10 000 ventanas, 200 fallas)</p>
+        <table class="tbl mt-1"><thead><tr><th></th><th>Pred. falla</th><th>Pred. normal</th></tr></thead>
+          <tbody><tr><td>Real falla</td><td>170</td><td>30</td></tr><tr><td>Real normal</td><td>113</td><td>9 687</td></tr></tbody></table>
+      </div>
+    </div>
+    <div id="casoSteps" class="mt-4 space-y-4"></div>
+  </section>
+
+  <!-- =========================================================
+       6. EJERCICIOS
+       ========================================================= -->
+  <section id="ejercicios" class="card p-4 sm:p-6" aria-labelledby="t-ejer">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="t-ejer" class="serif text-2xl font-bold text-inst">6 · Ejercicios para resolver</h2>
+      <button id="btnAllSol" class="px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-semibold">Mostrar / ocultar todas las soluciones</button>
+    </div>
+    <p class="text-sm text-slate-600 mt-1">Resuélvelos con calculadora (y luego compruébalos en Python). Van de menor a mayor dificultad. Abre la solución solo después de intentarlo.</p>
+    <div id="ejerList" class="grid gap-4 mt-4"></div>
+  </section>
+
+  <!-- =========================================================
+       7. AUTOEVALUACIÓN
+       ========================================================= -->
+  <section id="quiz" class="card p-4 sm:p-6" aria-labelledby="t-quiz">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 id="t-quiz" class="serif text-2xl font-bold text-inst">7 · Autoevaluación</h2>
+      <span class="chip bg-sky-100 text-inst" id="quizScoreTop">Puntaje: 0 / 8</span>
+    </div>
+    <div id="quizBox" class="mt-4 space-y-5"></div>
+    <div id="quizEnd" class="hidden-soft mt-5 rounded-xl p-4 border-2"></div>
+    <button id="quizReset" class="mt-4 px-4 py-2 rounded-lg border border-slate-300 font-semibold">↺ Reintentar</button>
+  </section>
+
+  <!-- =========================================================
+       8. ERRORES FRECUENTES
+       ========================================================= -->
+  <section id="errores" class="card p-4 sm:p-6" aria-labelledby="t-err">
+    <h2 id="t-err" class="serif text-2xl font-bold text-inst">8 · Encuentra el error</h2>
+    <p class="text-sm text-slate-600 mt-1">Lee la frase, piensa por qué está mal y haz clic para ver la corrección.</p>
+    <div id="errGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <footer class="text-center text-xs text-slate-500 pb-4 leading-relaxed">
+    Referencias: Gonzalez, R. C. &amp; Woods, R. E. (2018). <i>Digital Image Processing</i> (4.ª ed.). Pearson ·
+    Szeliski, R. (2022). <i>Computer Vision: Algorithms and Applications</i> (2.ª ed.). Springer ·
+    Oppenheim, A. V. &amp; Schafer, R. W. (2010). <i>Discrete-Time Signal Processing</i> (3.ª ed.). Pearson ·
+    Goodfellow, I., Bengio, Y. &amp; Courville, A. (2016). <i>Deep Learning</i>, cap. 9. MIT Press ·
+    Dalal, N. &amp; Triggs, B. (2005). Histograms of Oriented Gradients for Human Detection. CVPR ·
+    Ojala, T., Pietikäinen, M. &amp; Mäenpää, T. (2002). Multiresolution gray-scale and rotation invariant texture classification with LBP. IEEE TPAMI ·
+    Documentación de scikit-learn (load_digits) y OpenCV (Image Processing).<br>
+    Videos: 3Blue1Brown, YouTube. Los casos Envases del Sur y Minera Altiplano y los ejercicios son didácticos (datos construidos para cálculo manual).
+  </footer>
+</div>
+
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-emer text-white px-4 py-2 rounded-lg shadow-lg hidden-soft" role="status">✔ Resumen copiado</div>
+
+<script>
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const f2 = x => (Math.round(x * 100) / 100).toFixed(2).replace('-', '−');
+const f3 = x => (Math.round(x * 1000) / 1000).toFixed(3).replace('-', '−');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function updateProgress() {
+  const h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+  $('#progress').style.width = (max > 0 ? h.scrollTop / max * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+
+function initTabs(listId, onChange) {
+  const list = document.getElementById(listId);
+  const tabs = [...list.querySelectorAll('[role="tab"]')];
+  function select(tab) {
+    tabs.forEach(t => {
+      const on = t === tab;
+      t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).classList.toggle('hidden', !on);
+    });
+    if (onChange) onChange(tab.id);
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => select(t));
+    t.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        n.focus(); select(n);
+      }
+    });
+  });
+}
+
+function setupCanvas(c) {
+  const dpr = window.devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
+  c.width = W * dpr; c.height = H * dpr;
+  const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  return { x, W, H };
+}
+
+/* Números pseudoaleatorios reproducibles */
+let seed = 11;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const gauss = () => Math.sqrt(-2 * Math.log(rnd())) * Math.cos(2 * Math.PI * rnd());
+
+/* =====================================================================
+   1a. CONCEPTOS
+   ===================================================================== */
+const conceptos = [
+  ['Imagen digital = matriz', 'Una imagen en gris de H × W píxeles es una matriz de H × W enteros entre 0 (negro) y 255 (blanco), 8 bits por píxel. Una imagen de 28 × 28 son 784 números; una foto Full HD a color, más de 6 millones.'],
+  ['Canales y espacios de color', 'Color = 3 matrices (R, G, B) → tensor H × W × 3. Para pasar a gris: Y = 0.299R + 0.587G + 0.114B (el ojo es más sensible al verde). HSV separa el «tono» del brillo y facilita segmentar por color (fruta madura vs. verde).'],
+  ['Señal digital', 'Una señal es una secuencia x[n] = x(n·Ts) obtenida al medir un sensor cada Ts segundos. fs = 1/Ts es la frecuencia de muestreo: audio 44.1 kHz, ECG 250–500 Hz, vibración industrial 1–25 kHz.'],
+  ['Muestreo y teorema de Nyquist', 'Para representar una frecuencia f sin distorsión se necesita fs > 2f. Si no, aparece aliasing: la señal «se disfraza» de una frecuencia más baja (por eso en los videos las ruedas parecen girar al revés).'],
+  ['Convolución y filtros', 'Un kernel pequeño (3 × 3) se desliza sobre la imagen; en cada posición se multiplican los valores y se suman. Según los números del kernel se suaviza (media, gaussiano), se realza (sharpen) o se detectan bordes (Sobel, Laplaciano). Las CNN usan la misma operación con kernels aprendidos.'],
+  ['Dominio de la frecuencia (FFT)', 'La transformada de Fourier descompone una señal en senos y cosenos. Un pico en 120 Hz indica una vibración periódica a 120 Hz. Con N muestras, la resolución es Δf = fs/N y solo se ve hasta fs/2.'],
+  ['Característica (feature)', 'Un número que resume algo útil del dato crudo: brillo medio, densidad de bordes, RMS, frecuencia dominante. Juntas forman el vector x ∈ ℝᵈ que entra al clasificador. Buenas características = clases separables.'],
+  ['Clasificador', 'Función que asigna una clase a un vector de características: k-NN (vecinos), regresión logística, SVM, Random Forest o una CNN que aprende características y clasificador a la vez.']
+];
+$('#accConceptos').innerHTML = conceptos.map((c, i) => `
+  <div class="acc rounded-xl border border-slate-200 bg-white">
+    <button class="w-full flex justify-between items-center px-4 py-3 text-left font-semibold" aria-expanded="false" aria-controls="acc${i}">${c[0]}<span class="acc-icon text-cyan6 text-xl leading-none">+</span></button>
+    <div class="acc-body" id="acc${i}"><div><p class="px-4 pb-3 text-sm text-slate-700">${c[1]}</p></div></div>
+  </div>`).join('');
+$$('#accConceptos .acc > button').forEach(b => b.addEventListener('click', () => {
+  const o = b.parentElement.classList.toggle('open'); b.setAttribute('aria-expanded', o);
+}));
+
+/* 1b. ¿Qué representación? */
+const miniTipo = [
+  ['Una minera quiere detectar fallas de rodamientos con un acelerómetro pegado al motor.', 'sig', 'La vibración es una señal 1D: se extraen RMS, curtosis y energía por bandas de la FFT.'],
+  ['Un hospital quiere clasificar radiografías de tórax como normales o con neumonía.', 'img', 'Son imágenes 2D con mucha variabilidad: CNN (idealmente con transfer learning).'],
+  ['Un call center quiere reconocer 10 comandos de voz («saldo», «agente»…).', 'spec', 'El audio se convierte en espectrograma (tiempo × frecuencia) y se clasifica como si fuera una imagen.']
+];
+const tipoTxt = { sig: 'Señal 1D + FFT', img: 'Imagen 2D + CNN', spec: 'Espectrograma (señal → imagen)' };
+$('#miniTipo').innerHTML = miniTipo.map((m, i) => `
+  <div class="rounded-xl border border-slate-200 p-3 text-sm">
+    <p>${m[0]}</p>
+    <div class="grid gap-1.5 mt-2">${Object.keys(tipoTxt).map(k => `<button class="opt mtOpt text-sm" data-i="${i}" data-c="${k}">${tipoTxt[k]}</button>`).join('')}</div>
+    <p id="mtfb${i}" class="mt-2 text-xs" aria-live="polite"></p>
+  </div>`).join('');
+$$('.mtOpt').forEach(b => b.addEventListener('click', () => {
+  const m = miniTipo[b.dataset.i], ok = b.dataset.c === m[1];
+  b.classList.add(ok ? 'ok' : 'bad');
+  $('#mtfb' + b.dataset.i).innerHTML = (ok ? '<b class="text-emer">✔ Correcto. </b>' : '<b class="text-rech">✘ Revisa. </b>') + m[2];
+}));
+
+/* 1c. Pipeline */
+const pasos = [
+  ['1 · Problema y datos', '¿Qué decisión se automatiza (OK/defecto, normal/falla, dígito)? ¿Cuántos ejemplos etiquetados hay por clase? ¿Qué costo tiene cada tipo de error? Sin esto, ninguna métrica tendrá sentido.'],
+  ['2 · Adquisición', 'Cámara: resolución, iluminación constante, distancia fija. Sensor: frecuencia de muestreo fs &gt; 2·fmax (Nyquist), rango y ubicación. <b>Un mal dato no se arregla con un buen modelo.</b>'],
+  ['3 · Preprocesamiento', 'Imágenes: pasar a gris o HSV, redimensionar (p. ej., 224 × 224), normalizar a [0, 1], quitar ruido (gaussiano, mediana), recortar la región de interés. Señales: quitar la media, filtrar, dividir en ventanas de igual longitud.'],
+  ['4 · Extracción de características', 'Clásicas: histograma, bordes, HOG, LBP; RMS, curtosis, FFT por bandas, MFCC. Aprendidas: embeddings de una CNN preentrenada. Resultado: una matriz X (filas = ejemplos, columnas = características).'],
+  ['5 · Reducción y escalado', 'Estandarizar (ajustando el escalador solo con train). Si hay muchas columnas, reducir con PCA o seleccionar las más útiles. Esto acelera el modelo y reduce el sobreajuste.'],
+  ['6 · Clasificación', 'Empezar simple (k-NN, regresión logística) como línea base; luego SVM, Random Forest o CNN. Validación cruzada estratificada y aumento de datos (rotaciones, brillo) <b>solo en entrenamiento</b>.'],
+  ['7 · Evaluación y despliegue', 'Matriz de confusión, precisión, recall y F1 según el costo del negocio. Medir latencia (ms por imagen) y monitorear la deriva: cambia la cámara o la luz → cambia la distribución → baja el desempeño.']
+];
+let paso = 0;
+function renderPaso() {
+  $('#stepDots').innerHTML = pasos.map((p, i) => `<li><button class="step-dot w-9 h-9 rounded-full font-bold text-sm" data-i="${i}" ${i === paso ? 'aria-current="step"' : ''} aria-label="Paso ${i + 1}">${i + 1}</button></li>`).join('');
+  $('#stepBody').innerHTML = `<p class="font-bold text-inst text-lg">${pasos[paso][0]}</p><p class="mt-2">${pasos[paso][1]}</p>`;
+  $$('#stepDots button').forEach(b => b.addEventListener('click', () => { paso = +b.dataset.i; renderPaso(); }));
+  $('#stepPrev').disabled = paso === 0; $('#stepNext').disabled = paso === pasos.length - 1;
+}
+$('#stepPrev').addEventListener('click', () => { if (paso > 0) { paso--; renderPaso(); } });
+$('#stepNext').addEventListener('click', () => { if (paso < pasos.length - 1) { paso++; renderPaso(); } });
+renderPaso();
+
+/* 1e. Métricas */
+function renderMetr() {
+  const g = id => Math.max(0, +$(id).value || 0);
+  const TP = g('#mTP'), FN = g('#mFN'), FP = g('#mFP'), TN = g('#mTN'), T = TP + FN + FP + TN;
+  const acc = T ? (TP + TN) / T : 0, P = TP + FP ? TP / (TP + FP) : 0, R = TP + FN ? TP / (TP + FN) : 0;
+  const F1 = P + R ? 2 * P * R / (P + R) : 0, Esp = TN + FP ? TN / (TN + FP) : 0;
+  const card = (t, v, c) => `<div class="rounded-lg bg-slate-50 border p-3"><p class="text-xs text-slate-500">${t}</p><p class="font-bold text-lg ${c}">${(v * 100).toFixed(1)}%</p></div>`;
+  $('#mOut').innerHTML = card('Exactitud', acc, 'text-inst') + card('Precisión', P, 'text-stat') + card('Recall', R, 'text-emer') + card('F1', F1, 'text-inst') + card('Especificidad', Esp, '') +
+    `<div class="rounded-lg bg-slate-50 border p-3"><p class="text-xs text-slate-500">Prevalencia</p><p class="font-bold text-lg">${T ? ((TP + FN) / T * 100).toFixed(1) : 0}%</p></div>`;
+}
+['#mTP', '#mFN', '#mFP', '#mTN'].forEach(id => $(id).addEventListener('input', renderMetr));
+renderMetr();
+
+/* =====================================================================
+   IMAGEN SINTÉTICA COMPARTIDA (64 × 64)
+   ===================================================================== */
+const N = 64;
+const NOISE = Array.from({ length: 4096 }, gauss);
+function baseImg(noise) {
+  const a = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let v = 50 + 90 * x / (N - 1);                         // fondo con degradado
+    if ((x - 20) ** 2 + (y - 24) ** 2 <= 144) v = 225;      // círculo claro
+    if (x >= 38 && x <= 56 && y >= 34 && y <= 55) v = 25;   // cuadrado oscuro
+    if (y >= 8 && y <= 10 && x >= 34 && x <= 58) v = 205;   // línea horizontal
+    v += noise * NOISE[y * N + x];
+    a[y * N + x] = clamp(v, 0, 255);
+  }
+  return a;
+}
+function paint(canvas, arr, w, h, mark) {
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  const o = off.getContext('2d'), id = o.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    const v = clamp(Math.round(arr[i]), 0, 255);
+    id.data[4 * i] = id.data[4 * i + 1] = id.data[4 * i + 2] = v; id.data[4 * i + 3] = 255;
+  }
+  o.putImageData(id, 0, 0);
+  const c = canvas.getContext('2d'); c.imageSmoothingEnabled = false;
+  c.clearRect(0, 0, canvas.width, canvas.height); c.drawImage(off, 0, 0, canvas.width, canvas.height);
+  if (mark) {
+    const s = canvas.width / w, r = mark[2];
+    c.strokeStyle = '#e67e22'; c.lineWidth = 2;
+    c.strokeRect((mark[0] - r) * s, (mark[1] - r) * s, (2 * r + 1) * s, (2 * r + 1) * s);
+  }
+}
+function canvasPixel(canvas, e, w) {
+  const r = canvas.getBoundingClientRect();
+  return [clamp(Math.floor((e.clientX - r.left) / r.width * w), 0, w - 1), clamp(Math.floor((e.clientY - r.top) / r.height * w), 0, w - 1)];
+}
+
+/* =====================================================================
+   2a. IMAGEN = MATRIZ
+   ===================================================================== */
+let selA = [20, 24];
+function imgA() {
+  const b = +$('#brS').value, c = +$('#ctS').value, inv = $('#invC').checked, th = $('#thC').checked, t = +$('#tS').value;
+  return baseImg(+$('#nzA').value).map(v => {
+    let w = clamp(c * (v - 128) + 128 + b, 0, 255);
+    if (inv) w = 255 - w;
+    if (th) w = w >= t ? 255 : 0;
+    return w;
+  });
+}
+function drawImgLab() {
+  $('#nzAo').textContent = $('#nzA').value; $('#brSo').textContent = $('#brS').value;
+  $('#ctSo').textContent = (+$('#ctS').value).toFixed(1); $('#tSo').textContent = $('#tS').value;
+  const a = imgA();
+  paint($('#cImg'), a, N, N, [selA[0], selA[1], 2]);
+  // tabla de zoom
+  const cx = clamp(selA[0], 2, N - 3), cy = clamp(selA[1], 2, N - 3);
+  let h = '<thead><tr><th>y \\ x</th>';
+  for (let x = cx - 2; x <= cx + 2; x++) h += `<th>${x}</th>`;
+  h += '</tr></thead><tbody>';
+  for (let y = cy - 2; y <= cy + 2; y++) {
+    h += `<tr><td class="font-semibold">${y}</td>`;
+    for (let x = cx - 2; x <= cx + 2; x++) {
+      const v = Math.round(a[y * N + x]), on = x === selA[0] && y === selA[1];
+      h += `<td class="${on ? 'hl' : ''}" style="background:${on ? '' : `rgb(${v},${v},${v})`};color:${v > 140 ? '#0f172a' : '#fff'}">${v}</td>`;
+    }
+    h += '</tr>';
+  }
+  $('#zoomTbl').innerHTML = h + '</tbody>';
+  $('#selTxt').textContent = `(x = ${selA[0]}, y = ${selA[1]}) → ${Math.round(a[selA[1] * N + selA[0]])}`;
+  // histograma
+  const c = $('#cHist'); if (!c.clientWidth) return;
+  const { x, W, H } = setupCanvas(c), bins = new Array(32).fill(0);
+  a.forEach(v => bins[Math.min(31, Math.floor(v / 8))]++);
+  const mx = Math.max(...bins), pad = 22, bw = (W - 2 * pad) / 32;
+  x.fillStyle = '#64748b'; x.font = '11px Inter, sans-serif';
+  bins.forEach((n, i) => {
+    const bh = n / mx * (H - pad - 10), g = i * 8 + 4;
+    x.fillStyle = `rgb(${g},${g},${g})`; x.fillRect(pad + i * bw + 1, H - pad - bh, bw - 2, bh);
+    x.strokeStyle = '#cbd5e1'; x.strokeRect(pad + i * bw + 1, H - pad - bh, bw - 2, bh);
+  });
+  x.fillStyle = '#64748b'; x.fillText('0', pad, H - 6); x.fillText('255', W - pad - 20, H - 6); x.fillText('Intensidad', W / 2 - 28, H - 6);
+  if ($('#thC').checked) {
+    const tx = pad + (+$('#tS').value) / 256 * (W - 2 * pad);
+    x.strokeStyle = '#c0392b'; x.setLineDash([5, 4]); x.lineWidth = 2; x.beginPath(); x.moveTo(tx, 6); x.lineTo(tx, H - pad); x.stroke(); x.setLineDash([]);
+    x.fillStyle = '#c0392b'; x.fillText('t', tx + 4, 16);
+  }
+  const m = a.reduce((s, v) => s + v, 0) / a.length, sd = Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length);
+  const pc = a.filter(v => v >= 128).length / a.length * 100;
+  $('#histTxt').innerHTML = `Media = <b>${m.toFixed(1)}</b> · Desviación (≈ contraste) = <b>${sd.toFixed(1)}</b> · Píxeles claros (≥ 128) = <b>${pc.toFixed(1)}%</b>. Estos tres números ya son <b>características</b> de la imagen. Observa los «montículos» del histograma: fondo, círculo, cuadrado.`;
+}
+['#nzA', '#brS', '#ctS', '#tS', '#invC', '#thC'].forEach(id => $(id).addEventListener('input', drawImgLab));
+$('#cImg').addEventListener('click', e => { selA = canvasPixel($('#cImg'), e, N); drawImgLab(); });
+
+function drawRGB() {
+  const R = +$('#cR').value, G = +$('#cG').value, B = +$('#cB').value, Y = 0.299 * R + 0.587 * G + 0.114 * B;
+  $('#swC').style.background = `rgb(${R},${G},${B})`; $('#swG').style.background = `rgb(${Math.round(Y)},${Math.round(Y)},${Math.round(Y)})`;
+  $('#rgbTxt').innerHTML = `Píxel = [R, G, B] = [${R}, ${G}, ${B}] · Gris Y = 0.299·${R} + 0.587·${G} + 0.114·${B} = <b>${Y.toFixed(1)}</b> · Normalizado: Y/255 = <b>${(Y / 255).toFixed(3)}</b>`;
+}
+['#cR', '#cG', '#cB'].forEach(id => $(id).addEventListener('input', drawRGB));
+drawRGB();
+
+/* =====================================================================
+   2b. CONVOLUCIÓN
+   ===================================================================== */
+const KER = {
+  id: ['Identidad', [0, 0, 0, 0, 1, 0, 0, 0, 0], 'Copia el píxel central: la salida es igual a la entrada (sin los bordes).'],
+  media: ['Media 3×3', Array(9).fill(1 / 9), 'Promedia los 9 vecinos: reduce ruido pero borronea los contornos. Suma de pesos = 1 (conserva el brillo).'],
+  gauss: ['Gaussiano', [1, 2, 1, 2, 4, 2, 1, 2, 1].map(v => v / 16), 'Promedio ponderado: el centro pesa más. Suaviza el ruido conservando mejor la forma. Muy usado antes de detectar bordes.'],
+  sharp: ['Enfoque', [0, -1, 0, -1, 5, -1, 0, -1, 0], 'Realza las diferencias con los vecinos: más nitidez… y más ruido. Suma = 1.'],
+  sobx: ['Sobel X', [-1, 0, 1, -2, 0, 2, -1, 0, 1], 'Derecha − izquierda: responde a cambios horizontales de intensidad → resalta bordes VERTICALES. Suma = 0 (zonas planas → 0). Se muestra |valor|.'],
+  soby: ['Sobel Y', [-1, -2, -1, 0, 0, 0, 1, 2, 1], 'Abajo − arriba: resalta bordes HORIZONTALES (mira la línea superior). Se muestra |valor|.'],
+  lap: ['Laplaciano', [0, 1, 0, 1, -4, 1, 0, 1, 0], 'Segunda derivada: detecta bordes en todas las direcciones, pero amplifica mucho el ruido. Sube el ruido y compruébalo.'],
+  mag: ['Magnitud Sobel', [-1, 0, 1, -2, 0, 2, -1, 0, 1], 'Combina ambos: G = √(Gx² + Gy²). Es la base del detector de Canny y de HOG. (El cuadro muestra Sobel X; también se usa Sobel Y.)']
+};
+let kerName = 'sobx', ker = KER.sobx[1].slice(), selB = [26, 24];
+const fmtK = v => Number.isInteger(v) ? String(v) : v.toFixed(3);
+$('#kerBtns').innerHTML = Object.keys(KER).map(k => `<button class="kbtn px-3 py-1.5 rounded-lg border border-slate-300 text-sm font-semibold" data-k="${k}" aria-pressed="${k === kerName}">${KER[k][0]}</button>`).join('');
+$('#kerIn').innerHTML = Array.from({ length: 9 }, (_, i) => `<input class="kin" id="kin${i}" aria-label="Peso ${i + 1} del kernel">`).join('');
+function syncKerInputs() { ker.forEach((v, i) => { $('#kin' + i).value = fmtK(v); }); }
+$$('.kbtn').forEach(b => b.addEventListener('click', () => {
+  kerName = b.dataset.k; ker = KER[kerName][1].slice(); syncKerInputs(); drawConv();
+}));
+for (let i = 0; i < 9; i++) $('#kin' + i).addEventListener('input', () => {
+  const v = parseFloat($('#kin' + i).value.replace(',', '.'));
+  if (!isNaN(v)) { ker[i] = v; kerName = 'custom'; drawConv(); }
+});
+function conv(src, w, h, k) {
+  const out = new Float32Array((w - 2) * (h - 2));
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    let s = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) s += src[(y + j) * w + x + i] * k[(j + 1) * 3 + i + 1];
+    out[(y - 1) * (w - 2) + x - 1] = s;
+  }
+  return out;
+}
+function drawConv() {
+  $('#nzBo').textContent = $('#nzB').value;
+  $$('.kbtn').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === kerName));
+  const src = baseImg(+$('#nzB').value);
+  let out, gx, gy;
+  if (kerName === 'mag') {
+    gx = conv(src, N, N, KER.sobx[1]); gy = conv(src, N, N, KER.soby[1]);
+    out = gx.map((v, i) => Math.sqrt(v * v + gy[i] * gy[i]));
+  } else out = conv(src, N, N, ker);
+  const sum = ker.reduce((a, b) => a + b, 0), edge = kerName === 'mag' || Math.abs(sum) < 1e-6;
+  const disp = out.map(v => edge ? Math.min(255, Math.abs(v)) : clamp(v, 0, 255));
+  paint($('#cOrig'), src, N, N, [selB[0], selB[1], 1]);
+  paint($('#cFilt'), disp, N - 2, N - 2, [selB[0] - 1, selB[1] - 1, 0]);
+  $('#kerDesc').innerHTML = kerName === 'custom' ? `Kernel personalizado. Suma de pesos = <b>${f2(sum)}</b> (1 conserva el brillo; 0 detecta cambios).` : KER[kerName][2];
+  // cálculo en el píxel elegido
+  const [px, py] = selB;
+  const patch = [], prods = [];
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) patch.push(Math.round(src[(py + j) * N + px + i]));
+  const kk = kerName === 'mag' ? KER.sobx[1] : ker;
+  patch.forEach((v, i) => prods.push(v * kk[i]));
+  const s = prods.reduce((a, b) => a + b, 0);
+  const tb = (arr, f) => `<table class="tbl mini" style="width:auto">${[0, 1, 2].map(r => `<tr>${[0, 1, 2].map(c => `<td class="${r === 1 && c === 1 ? 'hl' : ''}">${f(arr[r * 3 + c])}</td>`).join('')}</tr>`).join('')}</table>`;
+  let extra = '';
+  if (kerName === 'mag') {
+    let sy = 0; patch.forEach((v, i) => sy += v * KER.soby[1][i]);
+    extra = `<p class="mt-2">Gx = ${f2(s)} · Gy = ${f2(sy)} → G = √(Gx² + Gy²) = <b>${f2(Math.sqrt(s * s + sy * sy))}</b></p>`;
+  }
+  $('#convCalc').innerHTML = `<p class="font-semibold text-inst">Cálculo en el píxel (x = ${px}, y = ${py}) — haz clic en la imagen original para cambiarlo</p>
+    <div class="flex flex-wrap items-center gap-3 mt-2"><div><p class="text-xs text-slate-500">Vecindario I</p>${tb(patch, v => v)}</div><span class="text-xl">⊙</span>
+    <div><p class="text-xs text-slate-500">Kernel K</p>${tb(kk, fmtK)}</div><span class="text-xl">=</span>
+    <div><p class="text-xs text-slate-500">Productos</p>${tb(prods, v => f2(v))}</div>
+    <div class="text-sm">Suma = <b class="text-stat text-lg">${f2(s)}</b>${edge && kerName !== 'mag' ? `<br>se muestra |${f2(s)}| → ${Math.min(255, Math.round(Math.abs(s)))}` : ''}</div></div>${extra}`;
+}
+$('#nzB').addEventListener('input', drawConv);
+$('#cOrig').addEventListener('click', e => { const p = canvasPixel($('#cOrig'), e, N); selB = [clamp(p[0], 1, N - 2), clamp(p[1], 1, N - 2)]; drawConv(); });
+syncKerInputs();
+
+/* =====================================================================
+   2c. SEÑALES Y FOURIER
+   ===================================================================== */
+const NS = 256;
+function drawSig() {
+  const fs = +$('#fsS').value, f1 = +$('#f1S').value, f2v = +$('#f2S').value, nz = +$('#nzS').value, w = +$('#maS').value;
+  $('#fsSo').textContent = fs + ' Hz'; $('#f1So').textContent = f1 + ' Hz'; $('#f2So').textContent = f2v ? f2v + ' Hz' : 'apagada';
+  $('#nzSo').textContent = nz.toFixed(2); $('#maSo').textContent = w === 1 ? 'sin filtro' : w + ' muestras';
+  const clean = t => Math.sin(2 * Math.PI * f1 * t) + (f2v ? 0.5 * Math.sin(2 * Math.PI * f2v * t) : 0);
+  const raw = Array.from({ length: NS }, (_, n) => clean(n / fs) + nz * NOISE[n]);
+  const y = raw.map((_, n) => { let s = 0, c = 0; for (let k = Math.max(0, n - w + 1); k <= n; k++) { s += raw[k]; c++; } return s / c; });
+  // ---- tiempo
+  const ct = $('#cTime');
+  if (ct.clientWidth) {
+    const { x, W, H } = setupCanvas(ct), pad = 30, M = 128, Y = v => H / 2 - v / 2.2 * (H / 2 - 10), X = n => pad + n / (M - 1) * (W - pad - 10);
+    x.strokeStyle = '#e2e8f0'; x.beginPath(); x.moveTo(pad, H / 2); x.lineTo(W - 10, H / 2); x.stroke();
+    x.strokeStyle = '#94a3b8'; x.lineWidth = 1.2; x.beginPath();
+    for (let i = 0; i <= 1200; i++) { const n = i / 1200 * (M - 1), v = clean(n / fs); i ? x.lineTo(X(n), Y(v)) : x.moveTo(X(n), Y(v)); }
+    x.stroke();
+    x.strokeStyle = '#1e3a8a'; x.lineWidth = 2; x.beginPath();
+    for (let n = 0; n < M; n++) n ? x.lineTo(X(n), Y(y[n])) : x.moveTo(X(n), Y(y[n]));
+    x.stroke();
+    x.fillStyle = '#1e3a8a'; for (let n = 0; n < M; n++) { x.beginPath(); x.arc(X(n), Y(y[n]), 2, 0, 7); x.fill(); }
+    x.fillStyle = '#64748b'; x.font = '11px Inter, sans-serif';
+    x.fillText('0 s', pad, H - 4); x.fillText(((M - 1) / fs).toFixed(3) + ' s', W - 60, H - 4); x.fillText('x[n]', 2, 14);
+  }
+  // ---- DFT
+  const half = NS / 2, mag = [];
+  for (let k = 0; k <= half; k++) {
+    let re = 0, im = 0;
+    for (let n = 0; n < NS; n++) { const a = 2 * Math.PI * k * n / NS; re += y[n] * Math.cos(a); im -= y[n] * Math.sin(a); }
+    mag.push((k === 0 ? 1 : 2) * Math.sqrt(re * re + im * im) / NS);
+  }
+  const cf = $('#cFreq');
+  const alias = f => Math.abs(f - fs * Math.round(f / fs));
+  if (cf.clientWidth) {
+    const { x, W, H } = setupCanvas(cf), pad = 30, mx = Math.max(1.1, ...mag), X = f => pad + f / (fs / 2) * (W - pad - 12), Y = v => H - 20 - v / mx * (H - 34);
+    x.strokeStyle = '#e2e8f0'; x.beginPath(); x.moveTo(pad, H - 20); x.lineTo(W - 12, H - 20); x.stroke();
+    x.fillStyle = '#64748b'; x.font = '11px Inter, sans-serif';
+    for (let i = 0; i <= 4; i++) { const f = fs / 2 * i / 4; x.fillText(Math.round(f) + ' Hz', X(f) - 12, H - 5); }
+    [[f1, '#e67e22', 'f₁'], [f2v, '#047857', 'f₂']].forEach(([f, col, lab]) => {
+      if (!f) return;
+      const fa = alias(f);
+      x.strokeStyle = col; x.setLineDash([4, 4]); x.lineWidth = 1.5; x.beginPath(); x.moveTo(X(fa), 8); x.lineTo(X(fa), H - 20); x.stroke(); x.setLineDash([]);
+      x.fillStyle = col; x.font = 'bold 11px Inter, sans-serif'; x.fillText(f > fs / 2 ? `${lab} disfrazada (${fa.toFixed(0)} Hz)` : `${lab} = ${f} Hz`, X(fa) + 4, 18 + (lab === 'f₂' ? 14 : 0));
+    });
+    x.strokeStyle = '#1e3a8a'; x.lineWidth = 2;
+    mag.forEach((v, k) => { const f = k * fs / NS; x.beginPath(); x.moveTo(X(f), H - 20); x.lineTo(X(f), Y(v)); x.stroke(); });
+    x.fillStyle = '#c0392b'; x.font = 'bold 11px Inter, sans-serif'; x.fillText('fs/2', W - 40, 14);
+  }
+  // ---- alias
+  const bad = [f1, f2v].filter(f => f && f >= fs / 2);
+  const box = $('#aliasBox');
+  if (bad.length) {
+    box.className = 'rounded-xl p-3 text-sm bg-red-50 border border-red-200';
+    box.innerHTML = `<b class="text-rech">⚠ Aliasing.</b> fs/2 = ${fs / 2} Hz, pero hay componentes en ${bad.join(' y ')} Hz. La computadora las ve como ${bad.map(f => alias(f).toFixed(0)).join(' y ')} Hz. Mira cómo los puntos azules ya no siguen la curva gris. Se necesita fs &gt; ${2 * Math.max(...bad)} Hz.`;
+  } else {
+    box.className = 'rounded-xl p-3 text-sm bg-emerald-50 border border-emerald-200';
+    box.innerHTML = `<b class="text-emer">✔ Nyquist se cumple.</b> fs/2 = ${fs / 2} Hz &gt; ${Math.max(f1, f2v)} Hz. Resolución Δf = fs/N = ${(fs / NS).toFixed(2)} Hz. Prueba bajar fs por debajo de ${2 * Math.max(f1, f2v)} Hz.`;
+  }
+  // ---- características
+  const m = y.reduce((s, v) => s + v, 0) / NS, rms = Math.sqrt(y.reduce((s, v) => s + v * v, 0) / NS);
+  const vr = y.reduce((s, v) => s + (v - m) ** 2, 0) / NS, ku = y.reduce((s, v) => s + (v - m) ** 4, 0) / NS / (vr * vr);
+  const pk = Math.max(...y.map(Math.abs));
+  let zc = 0; for (let n = 1; n < NS; n++) if ((y[n - 1] - m) * (y[n] - m) < 0) zc++;
+  let kd = 1; for (let k = 2; k <= half; k++) if (mag[k] > mag[kd]) kd = k;
+  const feats = [['Media', f3(m)], ['RMS', f3(rms)], ['Pico |x|', f3(pk)], ['Curtosis', f2(ku)], ['Cruces por 0', zc], ['Frec. dominante', (kd * fs / NS).toFixed(1) + ' Hz']];
+  $('#sigFeat').innerHTML = feats.map(([t, v]) => `<div class="rounded-lg bg-slate-50 border p-2"><p class="text-xs text-slate-500">${t}</p><p class="font-bold text-inst">${v}</p></div>`).join('');
+}
+['#fsS', '#f1S', '#f2S', '#nzS', '#maS'].forEach(id => $(id).addEventListener('input', drawSig));
+
+/* =====================================================================
+   2d. k-NN
+   ===================================================================== */
+const knnSmall = [[0.80, 0.20, 0, 'A'], [0.75, 0.25, 0, 'B'], [0.85, 0.15, 0, 'C'], [0.50, 0.60, 1, 'D'], [0.45, 0.70, 1, 'E'], [0.60, 0.55, 1, 'F']];
+seed = 2024;
+const knnLarge = knnSmall.slice();
+for (let i = 0; i < 12; i++) knnLarge.push([clamp(0.76 + 0.07 * gauss(), 0.03, 0.97), clamp(0.24 + 0.08 * gauss(), 0.03, 0.97), 0, 'OK' + (i + 1)]);
+for (let i = 0; i < 12; i++) knnLarge.push([clamp(0.52 + 0.08 * gauss(), 0.03, 0.97), clamp(0.60 + 0.09 * gauss(), 0.03, 0.97), 1, 'D' + (i + 1)]);
+let q = [0.66, 0.40];
+const clsTxt = ['OK', 'Defecto'], clsCol = ['#1e3a8a', '#c0392b'];
+function knn(data, p, k) {
+  const d = data.map(r => ({ r, d: Math.hypot(r[0] - p[0], r[1] - p[1]) })).sort((a, b) => a.d - b.d).slice(0, k);
+  const v = [0, 0]; d.forEach(o => v[o.r[2]]++);
+  return { nb: d, votes: v, cls: v[1] > v[0] ? 1 : 0 };
+}
+function drawKnn() {
+  const small = $('#smallC').checked, data = small ? knnSmall : knnLarge;
+  const kS = $('#kS'); kS.max = small ? 5 : 15; if (+kS.value > +kS.max) kS.value = kS.max;
+  const k = +kS.value; $('#kSo').textContent = k;
+  const res = knn(data, q, k);
+  const c = $('#cKnn');
+  if (c.clientWidth) {
+    const { x, W, H } = setupCanvas(c), pad = 40, X = v => pad + v * (W - pad - 12), Y = v => H - pad - v * (H - pad - 12);
+    if ($('#regC').checked) {
+      const G = 60;
+      for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
+        const cl = knn(data, [(i + 0.5) / G, (j + 0.5) / G], k).cls;
+        x.fillStyle = cl ? 'rgba(192,57,43,.10)' : 'rgba(30,58,138,.10)';
+        x.fillRect(X(i / G), Y((j + 1) / G), (W - pad - 12) / G + 0.5, (H - pad - 12) / G + 0.5);
+      }
+    }
+    x.strokeStyle = '#cbd5e1'; x.strokeRect(pad, 12, W - pad - 12, H - pad - 12);
+    x.fillStyle = '#64748b'; x.font = '11px Inter, sans-serif';
+    for (let t = 0; t <= 1.001; t += 0.25) { x.fillText(t.toFixed(2), X(t) - 10, H - pad + 14); x.fillText(t.toFixed(2), 6, Y(t) + 4); }
+    x.fillText('x₁ = brillo medio', W / 2 - 40, H - 6);
+    x.save(); x.translate(12, H / 2 + 50); x.rotate(-Math.PI / 2); x.fillText('x₂ = densidad de bordes', 0, 0); x.restore();
+    const r = res.nb.length ? res.nb[res.nb.length - 1].d : 0;
+    x.strokeStyle = '#e67e22'; x.setLineDash([4, 4]); x.beginPath(); x.ellipse(X(q[0]), Y(q[1]), r * (W - pad - 12), r * (H - pad - 12), 0, 0, 7); x.stroke(); x.setLineDash([]);
+    res.nb.forEach(o => { x.strokeStyle = '#e67e22'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(X(q[0]), Y(q[1])); x.lineTo(X(o.r[0]), Y(o.r[1])); x.stroke(); });
+    data.forEach(p => {
+      x.fillStyle = clsCol[p[2]];
+      if (p[2]) x.fillRect(X(p[0]) - 5, Y(p[1]) - 5, 10, 10); else { x.beginPath(); x.arc(X(p[0]), Y(p[1]), 5.5, 0, 7); x.fill(); }
+      if (small || p[3].length === 1) { x.fillStyle = '#0f172a'; x.font = 'bold 11px Inter, sans-serif'; x.fillText(p[3], X(p[0]) + 8, Y(p[1]) - 6); }
+    });
+    x.fillStyle = '#e67e22'; x.strokeStyle = '#0f172a'; x.lineWidth = 1.5;
+    x.beginPath(); const sx = X(q[0]), sy = Y(q[1]);
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 4 : 10; x.lineTo(sx + rr * Math.cos(a), sy + rr * Math.sin(a)); }
+    x.closePath(); x.fill(); x.stroke();
+    x.fillStyle = '#0f172a'; x.fillText('Nueva', sx + 12, sy + 14);
+  }
+  const box = $('#knnOut');
+  box.className = `rounded-xl p-3 text-sm border ${res.cls ? 'bg-red-50 border-red-200' : 'bg-sky-50 border-sky-200'}`;
+  box.innerHTML = `Pieza nueva = (${f2(q[0])}, ${f2(q[1])})<br>Votos: OK = <b>${res.votes[0]}</b> · Defecto = <b>${res.votes[1]}</b><br>Predicción: <b style="color:${clsCol[res.cls]}">${clsTxt[res.cls]}</b>`;
+  $('#knnTbl').innerHTML = `<thead><tr><th>#</th><th>Pieza</th><th>x₁</th><th>x₂</th><th>Clase</th><th>Distancia</th></tr></thead><tbody>${res.nb.map((o, i) => `<tr><td>${i + 1}</td><td>${o.r[3]}</td><td>${f2(o.r[0])}</td><td>${f2(o.r[1])}</td><td style="color:${clsCol[o.r[2]]};font-weight:600">${clsTxt[o.r[2]]}</td><td>${f3(o.d)}</td></tr>`).join('')}</tbody>`;
+}
+$('#cKnn').addEventListener('click', e => {
+  const c = $('#cKnn'), r = c.getBoundingClientRect(), pad = 40, W = r.width, H = r.height;
+  q = [clamp((e.clientX - r.left - pad) / (W - pad - 12), 0, 1), clamp((H - pad - (e.clientY - r.top)) / (H - pad - 12), 0, 1)];
+  drawKnn();
+});
+['#kS', '#smallC', '#regC'].forEach(id => $(id).addEventListener('input', drawKnn));
+function verKnn() { $('#tab-knn').click(); $('#smallC').checked = true; $('#kS').value = 3; q = [0.66, 0.40]; drawKnn(); $('#laboratorio').scrollIntoView(); }
+
+/* =====================================================================
+   2e. DIBUJA UN DÍGITO
+   ===================================================================== */
+const dc = $('#cDraw'), dctx = dc.getContext('2d');
+function clearDraw() { dctx.fillStyle = '#fff'; dctx.fillRect(0, 0, dc.width, dc.height); }
+clearDraw();
+let drawing = false, last = null;
+const dpos = e => { const r = dc.getBoundingClientRect(); return [(e.clientX - r.left) * dc.width / r.width, (e.clientY - r.top) * dc.height / r.height]; };
+function stroke(a, b) { dctx.strokeStyle = '#000'; dctx.lineWidth = 16; dctx.lineCap = 'round'; dctx.lineJoin = 'round'; dctx.beginPath(); dctx.moveTo(a[0], a[1]); dctx.lineTo(b[0], b[1]); dctx.stroke(); }
+dc.addEventListener('pointerdown', e => { drawing = true; try { dc.setPointerCapture(e.pointerId); } catch (_) {} last = dpos(e); stroke(last, [last[0] + 0.1, last[1]]); });
+dc.addEventListener('pointermove', e => { if (!drawing) return; const p = dpos(e); stroke(last, p); last = p; });
+['pointerup', 'pointercancel'].forEach(ev => dc.addEventListener(ev, () => { if (drawing) { drawing = false; classifyDigit(); } }));
+$('#drClear').addEventListener('click', () => { clearDraw(); $('#cVec').getContext('2d').clearRect(0, 0, 160, 160); $('#drOut').innerHTML = '<p class="text-sm text-slate-500">Dibuja un número grande y claro en el lienzo.</p>'; });
+$('#drDemo').addEventListener('click', () => { clearDraw(); stroke([55, 45], [150, 45]); stroke([150, 45], [90, 170]); stroke([80, 105], [135, 105]); classifyDigit(); });
+
+const S16 = 16;
+function toVec(src) {
+  const w = src.width, h = src.height, d = src.getContext('2d').getImageData(0, 0, w, h).data;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (255 - d[(y * w + x) * 4] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const side = Math.ceil(Math.max(x1 - x0 + 1, y1 - y0 + 1) * 1.2), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const t = document.createElement('canvas'); t.width = t.height = side;
+  const tc = t.getContext('2d'); tc.fillStyle = '#fff'; tc.fillRect(0, 0, side, side);
+  tc.drawImage(src, Math.round(side / 2 - cx), Math.round(side / 2 - cy));
+  const m = document.createElement('canvas'); m.width = m.height = 64;
+  const mc = m.getContext('2d'); mc.imageSmoothingEnabled = true; mc.drawImage(t, 0, 0, 64, 64);
+  const o = document.createElement('canvas'); o.width = o.height = S16;
+  const oc = o.getContext('2d'); oc.imageSmoothingEnabled = true; oc.drawImage(m, 0, 0, S16, S16);
+  const g = oc.getImageData(0, 0, S16, S16).data, v = [];
+  for (let i = 0; i < S16 * S16; i++) v.push((255 - g[4 * i]) / 255);
+  return v;
+}
+let templates = null;
+function buildTemplates() {
+  templates = [];
+  const fonts = ['Arial', 'Georgia', 'Courier New', 'Verdana', 'Trebuchet MS', 'Times New Roman'];
+  const c = document.createElement('canvas'); c.width = c.height = 200;
+  const x = c.getContext('2d');
+  fonts.forEach(f => { for (let d = 0; d <= 9; d++) {
+    x.fillStyle = '#fff'; x.fillRect(0, 0, 200, 200); x.fillStyle = '#000';
+    x.font = `bold 150px "${f}"`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(d), 100, 105);
+    const v = toVec(c); if (v) templates.push({ d, f, v });
+  } });
+}
+const cosSim = (a, b) => { let s = 0, na = 0, nb = 0; for (let i = 0; i < a.length; i++) { s += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; } return na && nb ? s / Math.sqrt(na * nb) : 0; };
+function classifyDigit() {
+  const v = toVec(dc); if (!v) return;
+  if (!templates) buildTemplates();
+  // vista 16×16
+  const cv = $('#cVec'), cx = cv.getContext('2d'), s = cv.width / S16;
+  for (let i = 0; i < S16 * S16; i++) { const g = Math.round(255 - v[i] * 255); cx.fillStyle = `rgb(${g},${g},${g})`; cx.fillRect((i % S16) * s, Math.floor(i / S16) * s, s, s); }
+  const best = Array(10).fill(0), bestF = Array(10).fill('');
+  templates.forEach(t => { const sm = cosSim(v, t.v); if (sm > best[t.d]) { best[t.d] = sm; bestF[t.d] = t.f; } });
+  const order = best.map((sm, d) => [d, sm]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const row = v.slice(8 * S16, 8 * S16 + 6).map(n => n.toFixed(2)).join(', ');
+  $('#drOut').innerHTML = `<p class="text-sm">Predicción: <b class="text-4xl text-inst align-middle ml-2">${order[0][0]}</b></p>` +
+    order.map(([d, sm], i) => `<div class="text-sm"><div class="flex justify-between"><span>Dígito <b>${d}</b> <span class="text-xs text-slate-500">(plantilla ${bestF[d]})</span></span><span>${sm.toFixed(3)}</span></div><div class="h-2.5 rounded bg-slate-200"><div class="h-2.5 rounded" style="width:${Math.max(0, sm) * 100}%;background:${i ? '#94a3b8' : '#1e3a8a'}"></div></div></div>`).join('') +
+    `<p class="text-xs text-slate-500 mt-1">Fila 8 del vector: [${row}, …] (256 valores en total)</p>`;
+}
+
+/* =====================================================================
+   VIDEOS · preguntas
+   ===================================================================== */
+const qVideos = [
+  ['Video 1: ¿por qué el kernel de desenfoque tiene pesos que suman 1?', 'Porque así el promedio conserva el brillo medio de la imagen. Si sumaran 2, la imagen se aclararía; si sumaran 0, solo quedarían los cambios (bordes).'],
+  ['Video 1: ¿qué relación hay entre la convolución del video y una capa Conv2D de Keras o PyTorch?', 'Es la misma operación (técnicamente correlación cruzada), pero los 9 pesos del kernel no se fijan a mano: se aprenden con retropropagación, y hay decenas de filtros por capa.'],
+  ['Video 2: si una vibración tiene un pico en 120 Hz, ¿qué fs mínima necesito para verlo?', 'Más de 240 Hz (Nyquist). En la práctica se usa un margen de 2.5 a 5 veces: 300–600 Hz o más.'],
+  ['Video 2: ¿por qué la FFT es útil para mantenimiento predictivo?', 'Cada tipo de falla (desbalance, desalineación, rodamiento) aparece como energía en frecuencias específicas. La amplitud en esas bandas es una característica muy discriminante.']
+];
+$('#qVideos').innerHTML = qVideos.map((q, i) => `
+  <div class="acc rounded-xl border border-slate-200 bg-white">
+    <button class="w-full flex justify-between items-center px-4 py-3 text-left font-semibold text-sm" aria-expanded="false" aria-controls="qv${i}">${q[0]}<span class="acc-icon text-cyan6 text-xl leading-none ml-2">+</span></button>
+    <div class="acc-body" id="qv${i}"><div><p class="px-4 pb-3 text-sm text-slate-700">${q[1]}</p></div></div>
+  </div>`).join('');
+$$('#qVideos .acc > button').forEach(b => b.addEventListener('click', () => {
+  const o = b.parentElement.classList.toggle('open'); b.setAttribute('aria-expanded', o);
+}));
+
+/* Pestañas */
+initTabs('tabsMarco');
+initTabs('tabsLab', id => {
+  if (id === 'tab-videos') $$('.ytFrame').forEach(f => { if (!f.src) f.src = f.dataset.src; });
+  setTimeout(drawAll, 30);
+});
+
+/* =====================================================================
+   3. EJEMPLO RESUELTO
+   ===================================================================== */
+const IMG5 = [[10, 10, 10, 80, 80], [10, 10, 10, 80, 80], [10, 10, 10, 80, 80], [10, 10, 10, 80, 80], [10, 10, 10, 80, 80]];
+const tblD = (rows, head) => `<div class="overflow-x-auto"><table class="tbl"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => typeof c === 'object' ? `<td class="${c.c}">${c.t}</td>` : `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const grayTbl = (M, hlFn) => `<table class="tbl mini" style="width:auto">${M.map((r, i) => `<tr>${r.map((v, j) => { const h = hlFn && hlFn(i, j); return `<td style="${h ? 'outline:2px solid #e67e22;' : ''}background:rgb(${v},${v},${v});color:${v > 140 ? '#0f172a' : '#fff'};min-width:38px">${v}</td>`; }).join('')}</tr>`).join('')}</table>`;
+const ejPasos = [
+  { t: 'Paso 0 · La imagen es una matriz', h: `
+    <div class="flex flex-wrap gap-5 items-start">${grayTbl(IMG5)}
+    <div class="text-sm max-w-md"><p>Tomamos una ventana de <b>5 × 5 píxeles</b> de la foto de una tapa (escala de grises, 0–255). A la izquierda la superficie es oscura (10) y a la derecha clara (80): hay un <b>borde vertical</b> entre las columnas 3 y 4.</p>
+    <p class="mt-2">Para la computadora esto no es «una tapa»: son 25 números. Una foto real de 640 × 480 son 307 200 números.</p></div></div>` },
+  { t: 'Paso 1 · Normalizar e histograma', h: `
+    <div class="formula text-sm">x' = x / 255 &nbsp;→&nbsp; 10/255 = <b>0.039</b> · 80/255 = <b>0.314</b></div>
+    ${tblD([['10', '15', '60%', '0.039'], ['80', '10', '40%', '0.314']], ['Intensidad', 'N.º de píxeles', '% del total', 'Normalizado'])}
+    <p class="text-sm mt-3">El histograma es <b>bimodal</b> (dos grupos). Un umbral t = 45 (en medio de 10 y 80) separa superficie oscura y clara → máscara binaria con 40% de píxeles «claros». Normalizamos porque las redes y k-NN funcionan mejor con valores en escalas comparables.</p>` },
+  { t: 'Paso 2 · ¿Cómo se desliza el kernel?', h: `
+    <div class="flex flex-wrap gap-5 items-start">${grayTbl(IMG5, (i, j) => i >= 1 && i <= 3 && j >= 1 && j <= 3)}
+    <div class="text-sm max-w-md"><p>El kernel 3 × 3 se coloca sobre un vecindario (recuadro naranja), multiplica elemento a elemento, suma y escribe el resultado en el píxel central. Luego se mueve un píxel (stride = 1).</p>
+    <div class="formula text-sm mt-2">Tamaño de salida = (N − k + 2p) / s + 1 = (5 − 3 + 0) / 1 + 1 = <b>3</b></div>
+    <p class="mt-2">Sin padding (p = 0), la salida es de <b>3 × 3</b>: se pierden los bordes de la imagen.</p></div></div>` },
+  { t: 'Paso 3 · Sobel X en el píxel central', h: `
+    <div class="flex flex-wrap items-center gap-3 text-sm">
+      <div><p class="text-xs text-slate-500">Vecindario (filas 2–4, columnas 2–4)</p>${grayTbl([[10, 10, 80], [10, 10, 80], [10, 10, 80]])}</div><span class="text-xl">⊙</span>
+      <div><p class="text-xs text-slate-500">Sobel X</p><table class="tbl mini" style="width:auto"><tr><td>−1</td><td>0</td><td>1</td></tr><tr><td>−2</td><td>0</td><td>2</td></tr><tr><td>−1</td><td>0</td><td>1</td></tr></table></div></div>
+    <div class="formula text-sm mt-3">Fila 1: (−1)(10) + 0(10) + 1(80) = 70<br>Fila 2: (−2)(10) + 0(10) + 2(80) = 140<br>Fila 3: (−1)(10) + 0(10) + 1(80) = 70<br><b>Gx = 70 + 140 + 70 = 280</b></div>
+    <p class="text-sm mt-2">Interpretación: Sobel X calcula «derecha − izquierda» (con más peso en la fila central). Un valor grande = cambio fuerte de intensidad de izquierda a derecha = <b>borde vertical</b>.</p>
+    <button class="mt-2 text-xs font-semibold text-cyan6 hover:underline" onclick="verConv()">Pruébalo con Sobel X en el laboratorio ↑</button>` },
+  { t: 'Paso 4 · Mapa de bordes completo', h: `
+    <div class="grid md:grid-cols-3 gap-3 text-sm">
+      <div><p class="font-semibold">Gx (Sobel X)</p>${tblD([['0', { t: '280', c: 'hl' }, { t: '280', c: 'hl' }], ['0', { t: '280', c: 'hl' }, { t: '280', c: 'hl' }], ['0', { t: '280', c: 'hl' }, { t: '280', c: 'hl' }]], ['c2', 'c3', 'c4'])}</div>
+      <div><p class="font-semibold">Gy (Sobel Y)</p>${tblD([['0', '0', '0'], ['0', '0', '0'], ['0', '0', '0']], ['c2', 'c3', 'c4'])}</div>
+      <div><p class="font-semibold">Magnitud G = √(Gx² + Gy²)</p>${tblD([['0', '280', '280'], ['0', '280', '280'], ['0', '280', '280']], ['c2', 'c3', 'c4'])}</div>
+    </div>
+    <p class="text-sm mt-3">Columna 2: vecindario todo oscuro → 0 (zona plana). Columnas 3 y 4: el vecindario cruza el borde → 280. Gy = 0 porque las filas son idénticas (no hay bordes horizontales). Dividiendo por 4 (suma de pesos positivos): 280/4 = <b>70 = 80 − 10</b>, el salto de intensidad.</p>
+    <p class="text-sm mt-2">Con un umbral (p. ej., G ≥ 100) → <b>6 de 9 posiciones son borde</b>: densidad de bordes de la ventana = 0.67.</p>` },
+  { t: 'Paso 5 · Vector de características', h: `
+    <p class="text-sm">Aplicando lo anterior a la <b>imagen completa</b> de cada tapa, el sistema extrae 2 características:</p>
+    ${tblD([['x₁ · Brillo medio', 'Media de intensidades / 255', 'Una abolladura o mancha oscurece la superficie'], ['x₂ · Densidad de bordes', '% de píxeles con G ≥ umbral', 'Rayas y grietas crean bordes donde no debería haber']], ['Característica', 'Cómo se calcula', 'Por qué discrimina'])}
+    <div class="formula text-sm mt-3">Tapa nueva (imagen completa): <b>x = (x₁, x₂) = (0.66, 0.40)</b></div>
+    <p class="text-sm mt-2">Pasamos de 307 200 píxeles a <b>2 números</b> con significado físico. Eso es extracción de características.</p>` },
+  { t: 'Paso 6 · Datos de entrenamiento', h: `
+    ${tblD([['A', '0.80', '0.20', { t: 'OK', c: 'hi' }], ['B', '0.75', '0.25', { t: 'OK', c: 'hi' }], ['C', '0.85', '0.15', { t: 'OK', c: 'hi' }], ['D', '0.50', '0.60', { t: 'Defecto', c: 'hl' }], ['E', '0.45', '0.70', { t: 'Defecto', c: 'hl' }], ['F', '0.60', '0.55', { t: 'Defecto', c: 'hl' }]], ['Tapa', 'x₁ brillo', 'x₂ bordes', 'Etiqueta (inspector)'])}
+    <p class="text-sm mt-3">Las tapas OK son claras y con pocos bordes; las defectuosas, más oscuras y con más bordes. Ambas características están en [0, 1], así que <b>no hace falta reescalar</b> para k-NN (si una estuviera en 0–255, dominaría la distancia).</p>` },
+  { t: 'Paso 7 · Distancias euclidianas', h: `
+    <div class="formula text-sm">d(N, A) = √[(0.66 − 0.80)² + (0.40 − 0.20)²] = √(0.0196 + 0.0400) = √0.0596 = <b>0.244</b></div>
+    ${tblD([['F', 'Defecto', '0.0036 + 0.0225', { t: '0.162', c: 'hl' }, '1.º'], ['B', 'OK', '0.0081 + 0.0225', { t: '0.175', c: 'hi' }, '2.º'], ['A', 'OK', '0.0196 + 0.0400', { t: '0.244', c: 'hi' }, '3.º'], ['D', 'Defecto', '0.0256 + 0.0400', '0.256', '4.º'], ['C', 'OK', '0.0361 + 0.0625', '0.314', '5.º'], ['E', 'Defecto', '0.0441 + 0.0900', '0.366', '6.º']], ['Tapa', 'Clase', 'Δx₁² + Δx₂²', 'd', 'Orden'])}` },
+  { t: 'Paso 8 · Decisión: ¡k importa!', h: `
+    <div class="grid md:grid-cols-2 gap-3 text-sm">
+      <div class="rounded-xl bg-red-50 border border-red-200 p-3"><b class="text-rech">k = 1</b> → vecino más cercano: F (Defecto). <b>Predicción: Defecto.</b></div>
+      <div class="rounded-xl bg-sky-50 border border-sky-200 p-3"><b class="text-inst">k = 3</b> → F (Defecto), B (OK), A (OK). Votos 2 a 1. <b>Predicción: OK.</b></div>
+    </div>
+    <p class="text-sm mt-3">La tapa está en la <b>frontera</b> entre clases. k pequeño es sensible al ruido; k grande suaviza la frontera. k se elige con <b>validación cruzada</b>, nunca mirando el test. Y con solo 6 ejemplos, ninguna decisión es confiable.</p>
+    <button class="mt-2 text-xs font-semibold text-cyan6 hover:underline" onclick="verKnn()">Ver estas 6 tapas en el laboratorio k-NN ↑</button>` },
+  { t: 'Paso 9 · Conclusión para gerencia', h: `
+    <div class="rounded-xl text-white p-4 text-sm" style="background:#1e3a8a"><p class="font-bold">Al gerente de planta</p><p class="mt-1 text-slate-100">«El sistema convierte cada foto en dos indicadores físicos —brillo y cantidad de bordes— y compara la tapa con ejemplos ya revisados por inspectores. Las tapas claramente buenas o malas se deciden solas en milisegundos. Las tapas dudosas, como esta, se envían a revisión humana. Para pasar a producción necesitamos <b>al menos 500 fotos etiquetadas por clase</b>, iluminación fija en la cámara y medir cuántos defectos se escapan (recall), porque una tapa defectuosa que llega al cliente cuesta más que una revisión extra.»</p></div>
+    <p class="text-sm mt-3"><b>Lección de diseño:</b> una zona de «no sé» (rechazo con revisión humana) suele ser más valiosa que forzar una predicción.</p>` }
+];
+let ej = 0;
+function renderEj() {
+  $('#ejDots').innerHTML = ejPasos.map((p, i) => `<li><button class="step-dot w-9 h-9 rounded-full font-bold text-sm" data-i="${i}" ${i === ej ? 'aria-current="step"' : ''} aria-label="${p.t}">${i}</button></li>`).join('');
+  $('#ejBody').innerHTML = `<p class="font-bold text-inst text-lg mb-3">${ejPasos[ej].t}</p>${ejPasos[ej].h}`;
+  $$('#ejDots button').forEach(b => b.addEventListener('click', () => { ej = +b.dataset.i; renderEj(); }));
+  $('#ejPrev').disabled = ej === 0; $('#ejNext').disabled = ej === ejPasos.length - 1;
+}
+$('#ejPrev').addEventListener('click', () => { if (ej > 0) { ej--; renderEj(); } });
+$('#ejNext').addEventListener('click', () => { if (ej < ejPasos.length - 1) { ej++; renderEj(); } });
+renderEj();
+function verConv() { $('#tab-conv').click(); kerName = 'sobx'; ker = KER.sobx[1].slice(); syncKerInputs(); drawConv(); $('#laboratorio').scrollIntoView(); }
+
+/* =====================================================================
+   4. DATASET DIGITS
+   ===================================================================== */
+const DIG0 = [[0, 0, 5, 13, 9, 1, 0, 0], [0, 0, 13, 15, 10, 15, 5, 0], [0, 3, 15, 2, 0, 11, 8, 0], [0, 4, 12, 0, 0, 8, 8, 0], [0, 5, 8, 0, 0, 9, 8, 0], [0, 4, 11, 0, 1, 12, 7, 0], [0, 2, 14, 5, 10, 12, 0, 0], [0, 0, 6, 13, 10, 0, 0, 0]];
+$('#digGrid').innerHTML = DIG0.flat().map((v, i) => { const g = Math.round(255 - v / 16 * 255); return `<div data-i="${i}" data-v="${v}" style="background:rgb(${g},${g},${g});color:${v > 7 ? '#fff' : '#334155'}">${v}</div>`; }).join('');
+$$('#digGrid div').forEach(d => d.addEventListener('mouseenter', () => {
+  const i = +d.dataset.i;
+  $('#digTxt').innerHTML = `Fila ${Math.floor(i / 8)}, columna ${i % 8} → característica <b>x[${i}]</b> = ${d.dataset.v} (de 0 a 16). Índice = 8 · fila + columna.`;
+}));
+
+/* =====================================================================
+   5. CASO GUIADO
+   ===================================================================== */
+const caso = [
+  { t: 'Paso 1 · Muestreo', q: 'Las fallas aparecen hasta 400 Hz y el sensor muestrea a fs = 1 000 Hz. ¿Es suficiente?', o: [
+    ['Sí: fs/2 = 500 Hz > 400 Hz, se cumple Nyquist.', true, 'Correcto. Podemos ver frecuencias hasta 500 Hz sin aliasing.'],
+    ['No: fs debe ser igual a 400 Hz exactamente.', false, 'Muestrear a la misma frecuencia de la señal produce aliasing total. Se necesita fs > 2 · 400 = 800 Hz.'],
+    ['No: se necesitan al menos 10 000 Hz para cualquier sensor.', false, 'No hay un mínimo universal: depende de la frecuencia máxima de interés (Nyquist).']] },
+  { t: 'Paso 2 · Resolución en frecuencia', q: 'Con ventanas de 1 s (N = 1 000 muestras), ¿qué resolución Δf tiene la FFT?', o: [
+    ['Δf = 1 000 Hz', false, 'Eso es fs. La resolución es fs/N.'],
+    ['Δf = fs/N = 1 000/1 000 = 1 Hz', true, 'Correcto. Podemos distinguir picos separados por 1 Hz. Ventanas más largas → mejor resolución, pero respuesta más lenta.'],
+    ['Δf = 0.5 Hz', false, 'Para 0.5 Hz se necesitaría una ventana de 2 s (N = 2 000).']] },
+  { t: 'Paso 3 · Características', q: '¿Qué vector de características describe mejor cada ventana de vibración?', o: [
+    ['[RMS, curtosis, factor de cresta, energía en la banda 300–400 Hz]', true, 'Correcto. RMS = energía general, curtosis = impactos (típicos de rodamientos dañados), banda = firma de la falla.'],
+    ['[ID del motor, nombre del técnico, turno]', false, 'Son metadatos, no describen la vibración. Además pueden introducir sesgos.'],
+    ['Las 1 000 muestras crudas sin procesar', false, 'Posible para una CNN 1D con muchos datos, pero no para un modelo clásico: la fase y el desfase cambian entre ventanas.']] },
+  { t: 'Paso 4 · Desbalance', q: 'Un practicante reporta: «Mi modelo tiene 98% de exactitud». Solo el 2% de las ventanas son fallas. ¿Qué respondes?', o: [
+    ['Excelente, pasamos a producción.', false, 'Un modelo que diga siempre «normal» también tiene 98% de exactitud y no detecta ninguna falla.'],
+    ['Muéstrame la matriz de confusión: con 2% de fallas, la exactitud engaña. Necesito recall y precisión de la clase falla.', true, 'Correcto. En datos desbalanceados se reporta recall, precisión, F1 (o curva PR), y se usa validación estratificada.'],
+    ['Hay que eliminar las fallas del entrenamiento porque son pocas.', false, '¡Son justamente lo que queremos detectar! Se balancea con pesos de clase o sobremuestreo, no eliminándolas.']] },
+  { t: 'Paso 5 · Interpretar el resultado', q: 'Con la matriz de test (VP = 170, FN = 30, FP = 113, VN = 9 687), ¿cuál es el recall y la precisión de la clase falla?', o: [
+    ['Recall = 85%, precisión ≈ 60%', true, 'Correcto. Recall = 170/200 = 0.85; precisión = 170/(170 + 113) = 170/283 ≈ 0.60. Detecta 85% de las fallas; 4 de cada 10 alarmas son falsas.'],
+    ['Recall = 60%, precisión = 85%', false, 'Están invertidos. Recall divide entre las fallas reales (200); precisión entre las alarmas (283).'],
+    ['Recall = 98.6%, precisión = 98.6%', false, 'Eso es la exactitud global: (170 + 9 687)/10 000 = 98.6%. No describe la clase falla.']] },
+  { t: 'Paso 6 · Conclusión gerencial', q: '¿Qué le dices al gerente de mantenimiento?', o: [
+    ['«El modelo es 98.6% exacto, confíe en él.»', false, 'Cifra engañosa con datos desbalanceados y sin traducción al negocio.'],
+    ['«De cada 100 fallas reales, el sistema anticipa 85. Generará unas 283 alertas por cada 10 000 ventanas, de las cuales 170 son reales: cada alerta implica una inspección de 15 minutos. Propongo un piloto en 10 motores y medir paradas evitadas.»', true, 'Excelente: traduce recall y precisión a fallas evitadas y carga de trabajo, y propone un piloto medible.'],
+    ['«La curtosis del motor 7 es 4.2.»', false, 'Es un dato técnico sin decisión asociada.']] }
+];
+let casoNivel = 0;
+function renderCaso() {
+  $('#casoSteps').innerHTML = caso.map((c, i) => {
+    if (i > casoNivel) return `<div class="rounded-xl border border-dashed border-slate-300 p-3 text-sm text-slate-400">🔒 ${c.t}</div>`;
+    return `<div class="rounded-xl border border-slate-200 p-4">
+      <p class="text-xs uppercase tracking-wider text-cyan6 font-semibold">${c.t}</p>
+      <p class="font-semibold mt-1">${c.q}</p>
+      <div class="grid gap-2 mt-3">${c.o.map((o, j) => `<button class="opt casoOpt text-sm" data-i="${i}" data-j="${j}">${o[0]}</button>`).join('')}</div>
+      <p class="text-sm mt-2" id="casofb${i}" aria-live="polite"></p>
+    </div>`;
+  }).join('') + (casoNivel >= caso.length ? `<div class="rounded-xl bg-emerald-50 border border-emerald-300 p-4 text-sm"><b class="text-emer">🎯 Caso resuelto.</b> Recorriste el pipeline completo: muestreo, resolución, características, desbalance, métricas y decisión.</div>` : '');
+  $$('.casoOpt').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, o = caso[i].o[+b.dataset.j];
+    b.classList.add(o[1] ? 'ok' : 'bad');
+    $('#casofb' + i).innerHTML = (o[1] ? '<b class="text-emer">✔ </b>' : '<b class="text-rech">✘ </b>') + o[2];
+    if (o[1] && casoNivel === i) { casoNivel++; setTimeout(renderCaso, 900); }
+  }));
+}
+renderCaso();
+
+/* =====================================================================
+   6. EJERCICIOS
+   ===================================================================== */
+const ejercicios = [
+  { n: 'Básico', t: 'Ejercicio 1 · ¿Cuántos números tiene una imagen?', e: `a) ¿Cuántos valores tiene una foto Full HD (1 920 × 1 080) a color RGB? ¿Cuántos bytes ocupa sin comprimir (8 bits por canal)?<br>b) Si se redimensiona a 224 × 224 × 3 (entrada típica de una CNN), ¿cuántos valores quedan y en qué % se reducen?`,
+    s: `a) 1 920 × 1 080 × 3 = <b>6 220 800 valores</b> = 6 220 800 bytes ≈ <b>6.2 MB</b> (≈ 5.93 MiB).<br>b) 224 × 224 × 3 = <b>150 528 valores</b>. Reducción = 1 − 150 528/6 220 800 = <b>97.6%</b>. Por eso siempre se redimensiona: menos memoria y cómputo, aunque se pierde detalle fino.` },
+  { n: 'Básico', t: 'Ejercicio 2 · De color a gris', e: `Un píxel tiene (R, G, B) = (200, 100, 50).<br>a) Calcula su valor en gris con Y = 0.299R + 0.587G + 0.114B. b) Normalízalo a [0, 1]. c) ¿Por qué G pesa más que B?`,
+    s: `a) 0.299·200 + 0.587·100 + 0.114·50 = 59.8 + 58.7 + 5.7 = <b>124.2 ≈ 124</b>.<br>b) 124.2/255 = <b>0.487</b>.<br>c) El ojo humano es más sensible al verde; los coeficientes (ITU-R BT.601) imitan la luminancia percibida. Compruébalo en el mini-lab RGB del laboratorio a).` },
+  { n: 'Intermedio', t: 'Ejercicio 3 · Convolución a mano', e: `Vecindario I = [[1, 2, 3], [4, 5, 6], [7, 8, 9]].<br>a) Aplica Sobel X = [[−1, 0, 1], [−2, 0, 2], [−1, 0, 1]]. b) Aplica el Laplaciano [[0, 1, 0], [1, −4, 1], [0, 1, 0]]. c) Interpreta ambos resultados.`,
+    s: `a) Fila 1: −1 + 3 = 2 · Fila 2: −8 + 12 = 4 · Fila 3: −7 + 9 = 2 → <b>Gx = 8</b>.<br>b) 2 + 4 + 6 + 8 − 4·5 = 20 − 20 = <b>0</b>.<br>c) La intensidad crece de forma lineal (una rampa): Sobel (1.ª derivada) detecta la pendiente; el Laplaciano (2.ª derivada) da 0 porque la pendiente es constante. El Laplaciano solo responde a cambios de pendiente (bordes abruptos).` },
+  { n: 'Intermedio', t: 'Ejercicio 4 · Dimensiones en una CNN', e: `Entrada de 32 × 32 × 3.<br>a) Tamaño de salida con un kernel 5 × 5, padding 0, stride 1. b) Con kernel 5 × 5, padding 2, stride 2. c) ¿Cuántos parámetros tiene una capa Conv2D con 16 filtros de 3 × 3 sobre esta entrada (incluye sesgo)?`,
+    s: `Fórmula: salida = ⌊(N − k + 2p)/s⌋ + 1.<br>a) (32 − 5 + 0)/1 + 1 = <b>28 × 28</b>.<br>b) ⌊(32 − 5 + 4)/2⌋ + 1 = ⌊15.5⌋ + 1 = <b>16 × 16</b>.<br>c) Cada filtro: 3 × 3 × 3 pesos + 1 sesgo = 28. Con 16 filtros: <b>448 parámetros</b>. Compara con una capa densa 3 072 → 16: 49 168 parámetros. La convolución comparte pesos.` },
+  { n: 'Intermedio', t: 'Ejercicio 5 · Nyquist y aliasing', e: `a) Una señal de 70 Hz se muestrea a fs = 100 Hz. ¿En qué frecuencia aparece? b) ¿Qué fs mínima se necesita? c) Con fs = 1 000 Hz y N = 500 muestras, ¿cuál es la resolución Δf y la duración de la ventana?`,
+    s: `a) fs/2 = 50 Hz &lt; 70 Hz → aliasing. Aparece en |70 − 100| = <b>30 Hz</b>.<br>b) fs &gt; 2 · 70 = <b>140 Hz</b>.<br>c) Δf = 1 000/500 = <b>2 Hz</b>; duración = 500/1 000 = <b>0.5 s</b>. Compruébalo en el laboratorio c): fs = 100 Hz, f₁ = 70 Hz, f₂ apagada.` },
+  { n: 'Intermedio', t: 'Ejercicio 6 · Características de una señal', e: `Ventana de vibración: x = [2, −1, 3, −2, 1, 2].<br>Calcula: a) media, b) RMS, c) valor pico, d) factor de cresta (pico/RMS), e) cruces por cero.`,
+    s: `a) Media = 5/6 = <b>0.833</b>.<br>b) Σx² = 4 + 1 + 9 + 4 + 1 + 4 = 23 → RMS = √(23/6) = √3.833 = <b>1.958</b>.<br>c) Pico = max|x| = <b>3</b>.<br>d) Factor de cresta = 3/1.958 = <b>1.53</b> (un seno puro da √2 ≈ 1.41; valores altos indican impactos).<br>e) Cambios de signo: 2→−1, −1→3, 3→−2, −2→1 = <b>4 cruces</b>.` },
+  { n: 'Avanzado', t: 'Ejercicio 7 · Métricas con desbalance', e: `Inspección de 1 000 tapas, 50 defectuosas. El modelo detecta 40 de las 50 y genera 30 falsas alarmas.<br>a) Arma la matriz de confusión. b) Calcula exactitud, precisión, recall y F1. c) ¿Qué exactitud tendría un modelo que diga siempre «OK»?`,
+    s: `a) VP = 40, FN = 10, FP = 30, VN = 920.<br>b) Exactitud = 960/1 000 = <b>96%</b> · Precisión = 40/70 = <b>57.1%</b> · Recall = 40/50 = <b>80%</b> · F1 = 2·0.571·0.8/1.371 = <b>0.667</b>.<br>c) 950/1 000 = <b>95%</b> con recall 0%. La diferencia de exactitud (96% vs 95%) parece mínima, pero uno atrapa 40 defectos y el otro ninguno. Verifícalo en la pestaña e) Métricas.` },
+  { n: 'Avanzado', t: 'Ejercicio 8 · Del output al gerente', e: `Con el modelo del ejercicio 7: cada tapa defectuosa que llega al cliente cuesta S/ 500 (reclamo y reposición) y cada falsa alarma cuesta S/ 20 (reinspección manual).<br>a) Costo por cada 1 000 tapas con el modelo. b) Costo sin modelo (sin inspección). c) Redacta UNA frase para el gerente y UNA frase prohibida corregida.`,
+    s: `a) 10 × 500 + 30 × 20 = 5 000 + 600 = <b>S/ 5 600</b>.<br>b) 50 × 500 = <b>S/ 25 000</b>. Ahorro = <b>S/ 19 400 por cada 1 000 tapas</b>.<br>c) «El sistema detecta 8 de cada 10 tapas defectuosas y reduce el costo de calidad de S/ 25 000 a S/ 5 600 por millar; el siguiente objetivo es bajar las 10 tapas que aún se escapan.»<br>Prohibida: «El modelo tiene 96% de accuracy». Corrección: «De 50 defectos, atrapamos 40; 30 de las 70 alarmas fueron falsas.»` }
+];
+const nivelColor = { 'Básico': 'bg-emerald-100 text-emer', 'Intermedio': 'bg-sky-100 text-inst', 'Avanzado': 'bg-orange-100 text-stat' };
+$('#ejerList').innerHTML = ejercicios.map((e, i) => `
+  <div class="rounded-xl border border-slate-200 p-4">
+    <div class="flex flex-wrap items-center gap-2"><span class="chip ${nivelColor[e.n]}">${e.n}</span><p class="font-bold text-slate7">${e.t}</p></div>
+    <div class="text-sm mt-2 leading-relaxed">${e.e}</div>
+    <button class="solBtn mt-3 px-3 py-1.5 rounded-lg bg-inst text-white text-sm font-semibold" data-i="${i}" aria-expanded="false" aria-controls="sol${i}">Ver solución</button>
+    <div id="sol${i}" class="sol mt-3 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm leading-relaxed">${e.s}</div>
+  </div>`).join('');
+$$('.solBtn').forEach(b => b.addEventListener('click', () => {
+  const s = $('#sol' + b.dataset.i), o = s.classList.toggle('show');
+  b.textContent = o ? 'Ocultar solución' : 'Ver solución'; b.setAttribute('aria-expanded', o);
+}));
+let allSol = false;
+$('#btnAllSol').addEventListener('click', () => {
+  allSol = !allSol;
+  $$('.sol').forEach(s => s.classList.toggle('show', allSol));
+  $$('.solBtn').forEach(b => { b.textContent = allSol ? 'Ocultar solución' : 'Ver solución'; b.setAttribute('aria-expanded', allSol); });
+});
+
+/* =====================================================================
+   7. AUTOEVALUACIÓN
+   ===================================================================== */
+const quiz = [
+  ['Una imagen RGB de 100 × 100 píxeles tiene, aplanada, cuántas características:', ['100', '10 000', '30 000', '300'], 2, '100 × 100 × 3 canales = 30 000 valores.'],
+  ['Con fs = 100 Hz, la frecuencia máxima que se puede representar sin aliasing es:', ['100 Hz', '50 Hz', '200 Hz', '25 Hz'], 1, 'El límite de Nyquist es fs/2 = 50 Hz.'],
+  ['Un kernel 3 × 3 con todos sus pesos iguales a 1/9:', ['Detecta bordes', 'Suaviza (reduce ruido)', 'Aumenta el contraste', 'Invierte la imagen'], 1, 'Es un filtro de media: promedia los 9 vecinos. Pesos que suman 1 conservan el brillo.'],
+  ['Entrada 32 × 32, kernel 5 × 5, sin padding, stride 1. La salida es:', ['32 × 32', '30 × 30', '28 × 28', '27 × 27'], 2, '(32 − 5)/1 + 1 = 28.'],
+  ['El filtro Sobel X responde con fuerza a:', ['Bordes verticales (cambios de izquierda a derecha)', 'Bordes horizontales', 'Zonas de color uniforme', 'El ruido aleatorio únicamente'], 0, 'Calcula derecha − izquierda: detecta cambios horizontales de intensidad, es decir, bordes verticales.'],
+  ['En un dataset con 99% de casos normales, un modelo que siempre predice «normal» tiene:', ['Exactitud 99% y recall 0%', 'Exactitud 50%', 'Recall 99%', 'Precisión 100% en la clase falla'], 0, 'Acierta todos los normales (99%) pero no detecta ninguna falla: recall = 0.'],
+  ['Para clasificar comandos de voz con una CNN 2D, el audio se transforma primero en:', ['Una imagen binaria', 'Un espectrograma (tiempo × frecuencia)', 'Un histograma de colores', 'Una matriz de correlaciones'], 1, 'El espectrograma aplica FFT en ventanas sucesivas y produce una «imagen» de la señal.'],
+  ['En k-NN, una característica en 0–255 y otra en 0–1 sin escalar provocan que:', ['La distancia la domine la de mayor rango', 'k-NN las ignore', 'El modelo sea más preciso', 'Se necesite k = 1'], 0, 'La distancia euclidiana suma diferencias al cuadrado: la variable de mayor escala domina. Hay que estandarizar.']
+];
+let qScore = 0, qDone = 0;
+function renderQuiz() {
+  qScore = 0; qDone = 0; $('#quizScoreTop').textContent = `Puntaje: 0 / ${quiz.length}`; $('#quizEnd').classList.add('hidden-soft');
+  $('#quizBox').innerHTML = quiz.map((q, i) => `
+    <div><p class="font-semibold">${i + 1}. ${q[0]}</p>
+      <div class="grid sm:grid-cols-2 gap-2 mt-2">${q[1].map((o, j) => `<button class="opt qOpt text-sm" data-i="${i}" data-j="${j}">${o}</button>`).join('')}</div>
+      <p id="qfb${i}" class="text-sm mt-2" aria-live="polite"></p></div>`).join('');
+  $$('.qOpt').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, j = +b.dataset.j, q = quiz[i], ok = j === q[2];
+    $$(`.qOpt[data-i="${i}"]`).forEach(x => { x.disabled = true; if (+x.dataset.j === q[2]) x.classList.add('ok'); });
+    if (!ok) b.classList.add('bad');
+    if (ok) qScore++; qDone++;
+    $('#qfb' + i).innerHTML = (ok ? '<b class="text-emer">✔ Correcto. </b>' : '<b class="text-rech">✘ Incorrecto. </b>') + q[3];
+    $('#quizScoreTop').textContent = `Puntaje: ${qScore} / ${quiz.length}`;
+    if (qDone === quiz.length) {
+      const e = $('#quizEnd'); e.classList.remove('hidden-soft');
+      const good = qScore >= 6;
+      e.className = `mt-5 rounded-xl p-4 border-2 ${good ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'}`;
+      e.innerHTML = `<b>${qScore} de ${quiz.length}.</b> ${good ? '¡Listo para el laboratorio en Python! Intenta los ejercicios avanzados.' : 'Vuelve al ejemplo resuelto (sección 3) y a los laboratorios b) y c) antes de reintentar.'}`;
+    }
+  }));
+}
+$('#quizReset').addEventListener('click', renderQuiz);
+renderQuiz();
+
+/* =====================================================================
+   8. ERRORES FRECUENTES
+   ===================================================================== */
+const errores = [
+  ['«Más resolución siempre da un mejor modelo.»', 'Más píxeles = más memoria, más cómputo y más ruido. La resolución debe bastar para ver el detalle que define la clase (una grieta de 1 mm). 224 × 224 suele ser suficiente para clasificar.'],
+  ['«Muestreo a la misma frecuencia que la vibración que busco.»', 'Nyquist exige fs &gt; 2·fmax. Con fs = f la señal se ve como una constante (aliasing total). En la práctica se usa un margen de 2.5 a 5 veces.'],
+  ['«98% de exactitud: el modelo está listo.»', 'Con clases desbalanceadas la exactitud engaña. Se revisa la matriz de confusión, el recall y la precisión de la clase minoritaria, y el costo de cada error.'],
+  ['«Normalizo todo el dataset y luego divido en train y test.»', 'Eso filtra información del test al entrenamiento (data leakage). El escalador se ajusta solo con train; usa un Pipeline de scikit-learn.'],
+  ['«Aplico cualquier aumento de datos: rotar 180° también.»', 'El aumento debe conservar la etiqueta: un 6 rotado 180° es un 9. Y se aplica solo al entrenamiento, nunca al test.'],
+  ['«Una CNN no necesita preprocesamiento.»', 'Sí lo necesita: tamaño fijo, normalización igual a la del entrenamiento y misma cámara e iluminación que en producción. Si cambia la distribución de entrada (deriva), el desempeño cae.']
+];
+$('#errGrid').innerHTML = errores.map((e, i) => `
+  <div class="flip" tabindex="0" role="button" aria-label="Error ${i + 1}: haz clic para ver la corrección">
+    <div class="flip-inner">
+      <div class="flip-face bg-red-50 border border-red-200"><p class="text-xs uppercase font-semibold text-rech">✘ Error</p><p class="font-semibold mt-2">${e[0]}</p><p class="text-xs text-slate-500 mt-3">Clic para ver la corrección</p></div>
+      <div class="flip-face flip-back bg-emerald-50 border border-emerald-200"><p class="text-xs uppercase font-semibold text-emer">✔ Corrección</p><p class="text-sm mt-2">${e[1]}</p></div>
+    </div>
+  </div>`).join('');
+$$('.flip').forEach(f => {
+  f.addEventListener('click', () => f.classList.toggle('flipped'));
+  f.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.classList.toggle('flipped'); } });
+});
+
+/* =====================================================================
+   COPIAR RESUMEN
+   ===================================================================== */
+const resumen = `REPASO · PROCESAMIENTO DE IMÁGENES Y SEÑALES PARA IA/ML
+1) Imagen = matriz H×W (gris) o H×W×3 (color), valores 0–255. Señal = x[n] muestreada a fs.
+2) Nyquist: fs > 2·fmax; si no, aliasing. Resolución FFT: Δf = fs/N.
+3) Preprocesar: gris/HSV, redimensionar, normalizar [0,1], filtrar ruido, ventanas.
+4) Convolución: kernel 3×3 deslizante. Media/gaussiano suavizan; Sobel/Laplaciano detectan bordes. Salida = (N − k + 2p)/s + 1.
+5) Características: histograma, bordes, HOG, LBP; RMS, curtosis, FFT por bandas, MFCC; o embeddings de CNN.
+6) Clasificar: k-NN (escalar antes), regresión logística, SVM, Random Forest, CNN. Escalador y aumentos solo con train.
+7) Evaluar: matriz de confusión, precisión, recall, F1 según el costo del error. Comunicar en fallas evitadas y soles ahorrados.`;
+$('#btnCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(resumen); } catch (e) {
+    const t = document.createElement('textarea'); t.value = resumen; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (_) {} t.remove();
+  }
+  const t = $('#toast'); t.classList.remove('hidden-soft'); setTimeout(() => t.classList.add('hidden-soft'), 1800);
+});
+
+/* Dibujo inicial y al redimensionar */
+function drawAll() { drawImgLab(); drawConv(); drawSig(); drawKnn(); }
+window.addEventListener('resize', drawAll);
+window.addEventListener('load', drawAll);
+drawAll(); updateProgress();
+</script>
+</body>
+</html>
