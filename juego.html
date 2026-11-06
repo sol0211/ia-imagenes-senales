@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Misión Visión</title>
+<!--
+  =====================================================================
+  VIDEOJUEGO DE REPASO · MISIÓN VISIÓN: DEL PÍXEL A LA PREDICCIÓN
+  Procesamiento de Imágenes y Señales aplicado a IA/ML · IX ciclo
+  Archivo único (HTML + CSS + JS + Web Audio API). Listo para GitHub Pages
+  o Google Sites (Insertar › Código embebido).
+  =====================================================================
+-->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131b36; --panel2: #1b2550; --line: #2a3770;
+    --txt: #e8ecff; --mut: #9aa6d6;
+    --cyan: #22d3ee; --violet: #a78bfa; --green: #34d399; --red: #fb7185; --yellow: #fbbf24; --pink: #f472b6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: 'Nunito', system-ui, sans-serif; color: var(--txt);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(167,139,250,.25), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(34,211,238,.20), transparent 60%),
+      var(--bg);
+    overflow-x: hidden;
+  }
+  body::before { /* cuadrícula "cyber" */
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .fred { font-family: 'Fredoka', 'Nunito', sans-serif; }
+  #app { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 16px; min-height: 100vh; display: flex; flex-direction: column; }
+  .screen { display: none; flex: 1; flex-direction: column; animation: pop .35s ease; }
+  .screen.active { display: flex; }
+  @keyframes pop { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+  .panel { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  .btn { font-family: 'Fredoka', sans-serif; font-weight: 600; border: 0; border-radius: 16px; cursor: pointer; transition: transform .1s, box-shadow .1s, filter .15s; color: #0b1020; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn:active { transform: translateY(3px); }
+  .btn:focus-visible, .opt:focus-visible, .avatar:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+  .btn-main { background: linear-gradient(90deg, var(--cyan), var(--violet)); box-shadow: 0 6px 0 #5b4bb8; font-size: 1.35rem; padding: 14px 28px; }
+  .btn-main:active { box-shadow: 0 3px 0 #5b4bb8; }
+  .btn-sec { background: #2a3770; color: var(--txt); box-shadow: 0 5px 0 #1a234a; padding: 10px 18px; font-size: 1rem; }
+  .btn-sec:active { box-shadow: 0 2px 0 #1a234a; }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; }
+  .title { font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.05; background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .avatars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  @media (max-width: 520px) { .avatars { grid-template-columns: repeat(3, 1fr); } }
+  .avatar { font-size: 2.2rem; background: #1a234a; border: 2px solid var(--line); border-radius: 18px; padding: 10px 0; cursor: pointer; transition: transform .15s, border-color .15s, background .15s; }
+  .avatar:hover { transform: translateY(-3px) rotate(-3deg); }
+  .avatar[aria-pressed="true"] { border-color: var(--cyan); background: rgba(34,211,238,.15); transform: scale(1.06); box-shadow: 0 0 0 4px rgba(34,211,238,.18); }
+  .inp { width: 100%; font-size: 1.15rem; padding: 12px 16px; border-radius: 14px; border: 2px solid var(--line); background: #0f1630; color: var(--txt); font-family: 'Nunito', sans-serif; font-weight: 700; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-weight: 800; font-size: .85rem; background: #1a234a; border: 1px solid var(--line); }
+  .hud { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  .hearts { font-size: 1.4rem; letter-spacing: 2px; }
+  .heart-lost { filter: grayscale(1); opacity: .3; }
+  .bar { height: 12px; border-radius: 999px; background: #0f1630; border: 1px solid var(--line); overflow: hidden; }
+  .bar > div { height: 100%; border-radius: 999px; transition: width .35s ease; }
+  .timer > div { transition: width .1s linear; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .opts { grid-template-columns: 1fr; } }
+  .opt { position: relative; display: flex; align-items: center; gap: 12px; text-align: left; border: 0; border-radius: 18px; padding: 16px 16px; min-height: 76px; color: #fff; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 1.05rem; cursor: pointer; box-shadow: 0 6px 0 rgba(0,0,0,.35); transition: transform .1s, opacity .2s, filter .2s; }
+  .opt:hover:not([disabled]) { transform: translateY(-2px); filter: brightness(1.1); }
+  .opt:active:not([disabled]) { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,.35); }
+  .opt .shape { flex: none; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: rgba(255,255,255,.2); font-size: 1.2rem; }
+  .opt .key { position: absolute; top: 6px; right: 10px; font-size: .75rem; opacity: .75; }
+  .o0 { background: #e0435c; } .o1 { background: #2f6fe4; } .o2 { background: #d9a300; } .o3 { background: #1f9d55; }
+  .opt[disabled] { cursor: default; }
+  .opt.dim { opacity: .25; }
+  .opt.gone { visibility: hidden; }
+  .opt.right { outline: 4px solid #fff; animation: bounce .5s; }
+  .opt.wrong { animation: shake .4s; filter: grayscale(.6); }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  @keyframes bounce { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .visual { display: flex; justify-content: center; margin-top: 14px; }
+  .mgrid { display: inline-grid; gap: 4px; }
+  .mgrid div { width: 56px; height: 56px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 1rem; border: 1px solid rgba(255,255,255,.15); }
+  @media (max-width: 420px) { .mgrid div { width: 46px; height: 46px; font-size: .9rem; } }
+  #modal { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(5,8,20,.72); backdrop-filter: blur(3px); }
+  #modal.show { display: flex; }
+  #modal .panel { max-width: 560px; width: 100%; animation: pop .3s ease; }
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+  .streak { animation: glow 1s ease-in-out infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 rgba(251,191,36,0); } to { box-shadow: 0 0 18px rgba(251,191,36,.7); } }
+  .float { position: fixed; z-index: 35; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 2rem; color: var(--yellow); pointer-events: none; animation: up 1s ease forwards; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+  @keyframes up { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-80px); } }
+  .lvlEmoji { font-size: 5rem; animation: spin 1.2s ease; display: inline-block; }
+  @keyframes spin { from { transform: rotate(-30deg) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+  .badge { font-size: 5.5rem; display: inline-block; animation: spin 1s ease; }
+  .stat { background: #0f1630; border: 1px solid var(--line); border-radius: 16px; padding: 12px; text-align: center; }
+  .stat b { display: block; font-family: 'Fredoka', sans-serif; font-size: 1.6rem; color: var(--cyan); }
+  .muted { color: var(--mut); }
+  .review li { border-left: 4px solid var(--red); background: #0f1630; border-radius: 10px; padding: 10px 12px; margin-top: 8px; list-style: none; }
+  #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50; background: var(--green); color: #0b1020; font-weight: 800; padding: 10px 18px; border-radius: 12px; display: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div id="app">
+
+  <!-- ============ PANTALLA DE INICIO ============ -->
+  <section id="sStart" class="screen active" aria-labelledby="tStart">
+    <div class="panel" style="padding:26px; margin:auto 0;">
+      <p class="chip" style="color:var(--cyan)">🎮 Juego de repaso · IX ciclo · Ing. de Sistemas Computacionales</p>
+      <h1 id="tStart" class="fred title" style="margin:16px 0 6px;">Misión Visión:<br>Del Píxel a la Predicción</h1>
+      <p class="muted" style="font-size:1.1rem; margin:0 0 20px;">Entrena tu cerebro como una red neuronal: 3 niveles, 15 preguntas, 20 segundos cada una.</p>
+
+      <p class="fred" style="font-size:1.15rem; margin:0 0 8px;">1 · Elige tu avatar</p>
+      <div class="avatars" id="avatars" role="group" aria-label="Avatares"></div>
+
+      <label class="fred" for="nameIn" style="display:block; font-size:1.15rem; margin:20px 0 8px;">2 · Escribe tu nombre</label>
+      <input id="nameIn" class="inp" maxlength="20" placeholder="Ej.: Valeria" autocomplete="off">
+      <p id="nameErr" style="color:var(--red); font-weight:700; min-height:22px; margin:6px 0 0;"></p>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin:10px 0 22px;">
+        <div class="stat"><b>+100</b><span class="muted">por acierto, + bono por rapidez</span></div>
+        <div class="stat"><b>🔥 x2</b><span class="muted">desde 3 aciertos seguidos</span></div>
+        <div class="stat"><b>❤️❤️❤️</b><span class="muted">3 vidas · 1 comodín 50/50</span></div>
+      </div>
+      <button id="btnStart" class="btn btn-main" style="width:100%;">🚀 ¡Iniciar Entrenamiento!</button>
+      <p class="muted" style="text-align:center; font-size:.85rem; margin:12px 0 0;">Tip: responde con las teclas 1–4 y continúa con Enter.</p>
+    </div>
+  </section>
+
+  <!-- ============ TRANSICIÓN DE NIVEL ============ -->
+  <section id="sLevel" class="screen" aria-live="polite">
+    <div class="panel" style="padding:30px; margin:auto 0; text-align:center;">
+      <div id="lvEmoji" class="lvlEmoji"></div>
+      <p id="lvNum" class="chip" style="margin-top:10px; color:var(--yellow)"></p>
+      <h2 id="lvName" class="fred title" style="margin:12px 0 8px;"></h2>
+      <p id="lvDesc" class="muted" style="font-size:1.1rem; max-width:520px; margin:0 auto 24px;"></p>
+      <button id="btnGo" class="btn btn-main">¡Vamos! ▶</button>
+    </div>
+  </section>
+
+  <!-- ============ JUEGO ============ -->
+  <section id="sGame" class="screen" aria-labelledby="qText">
+    <div class="panel" style="padding:12px 14px;">
+      <div class="hud">
+        <span class="chip"><span id="hAv" style="font-size:1.2rem"></span><span id="hName"></span></span>
+        <span id="hLevel" class="chip" style="color:var(--violet)"></span>
+        <span id="hStreak" class="chip" style="color:var(--yellow)">🔥 0</span>
+        <span class="chip" style="color:var(--cyan)">⭐ <span id="hScore">0</span></span>
+        <span id="hHearts" class="hearts" aria-label="Vidas"></span>
+        <button id="btnMute" class="btn btn-sec" style="padding:6px 12px" aria-label="Silenciar">🔊</button>
+      </div>
+      <div style="display:flex; justify-content:space-between; font-weight:800; font-size:.85rem; margin:10px 2px 4px;" class="muted">
+        <span id="hCount"></span><span id="hLvProg"></span>
+      </div>
+      <div class="bar"><div id="pBar" style="width:0%; background:linear-gradient(90deg,var(--cyan),var(--violet));"></div></div>
+    </div>
+
+    <div class="panel" style="padding:20px; margin-top:12px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="fred" style="font-size:1.5rem; min-width:44px; text-align:center;" id="tNum">20</span>
+        <div class="bar timer" style="flex:1; height:14px;"><div id="tBar" style="width:100%; background:var(--green);"></div></div>
+        <button id="btn5050" class="btn btn-sec" style="padding:8px 12px;">🎯 50/50</button>
+      </div>
+      <h2 id="qText" class="fred" style="font-size:clamp(1.25rem,3.4vw,1.7rem); line-height:1.25; margin:18px 0 0; text-align:center;"></h2>
+      <div id="qVisual" class="visual"></div>
+    </div>
+
+    <div id="opts" class="opts" style="margin-top:14px;"></div>
+  </section>
+
+  <!-- ============ RESULTADOS ============ -->
+  <section id="sEnd" class="screen" aria-labelledby="eTitle">
+    <div class="panel" style="padding:26px; margin:auto 0; text-align:center;">
+      <p id="eTop" class="chip" style="color:var(--yellow)"></p>
+      <h2 id="eTitle" class="fred title" style="margin:12px 0 4px;"></h2>
+      <div style="display:flex; justify-content:center; align-items:center; gap:18px; margin:10px 0;">
+        <span id="eAv" style="font-size:3.6rem"></span>
+        <span id="eBadge" class="badge"></span>
+      </div>
+      <p id="eBadgeTxt" class="fred" style="font-size:1.35rem; margin:4px 0 18px;"></p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px;">
+        <div class="stat"><b id="eScore"></b><span class="muted">Puntaje</span></div>
+        <div class="stat"><b id="eHits"></b><span class="muted">Aciertos</span></div>
+        <div class="stat"><b id="eBest"></b><span class="muted">Mejor racha</span></div>
+        <div class="stat"><b id="eLevel" style="font-size:1.05rem"></b><span class="muted">Nivel alcanzado</span></div>
+      </div>
+      <div id="eReview" style="text-align:left; margin-top:20px;"></div>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:22px;">
+        <button id="btnAgain" class="btn btn-main">🔁 Volver a Jugar</button>
+        <button id="btnCopy" class="btn btn-sec">📋 Copiar resultado</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ MODAL ¿SABÍAS QUE…? ============ -->
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="mHead">
+  <div class="panel" style="padding:24px;">
+    <p id="mHead" class="fred" style="font-size:1.6rem; margin:0;"></p>
+    <p id="mAns" style="font-weight:800; margin:10px 0 0;"></p>
+    <div style="margin-top:14px; background:#0f1630; border:1px solid var(--line); border-radius:16px; padding:14px;">
+      <p class="fred" style="color:var(--yellow); margin:0; font-size:1.1rem;">💡 ¿Sabías que…?</p>
+      <p id="mWhy" style="margin:6px 0 0; line-height:1.5;"></p>
+    </div>
+    <button id="btnNext" class="btn btn-main" style="width:100%; margin-top:18px; font-size:1.15rem;">Continuar ▶</button>
+  </div>
+</div>
+
+<div id="toast" role="status">✔ Resultado copiado</div>
+
+<script>
+/* =====================================================================
+   DATOS: NIVELES Y BANCO DE PREGUNTAS
+   a = índice de la respuesta correcta (antes de mezclar)
+   ===================================================================== */
+const LEVELS = [
+  { name: 'Explorador de Píxeles', emoji: '🔍', desc: 'Una imagen es una matriz de números y una señal es una lista de muestras. ¿Lo dominas?' },
+  { name: 'Ingeniero de Filtros', emoji: '🛠️', desc: 'Convoluciones, kernels, Nyquist y la FFT. Aquí los datos crudos se vuelven características.' },
+  { name: 'Experto en Visión Computacional', emoji: '🧠', desc: 'Clasificadores, escalado, métricas y CNN. El nivel que separa a los aprendices de los ingenieros.' }
+];
+const Q = [
+  // ---------- NIVEL 1 ----------
+  { l: 0, q: 'Una imagen RGB de 100 × 100 píxeles, aplanada, tiene cuántas características.', o: ['100', '10 000', '30 000', '300'], a: 2,
+    why: '100 × 100 píxeles × 3 canales = 30 000 números. Por eso las fotos se redimensionan antes de entrenar un modelo.' },
+  { l: 0, q: 'En una imagen en escala de grises de 8 bits, cada píxel toma valores entre:', o: ['0 y 1', '0 y 255', '−128 y 127', '0 y 1 000'], a: 1, v: { k: 'scale' },
+    why: '8 bits = 2⁸ = 256 niveles: 0 es negro y 255 es blanco.' },
+  { l: 0, q: 'Con Y = 0.299R + 0.587G + 0.114B, este píxel (200, 100, 50) en gris vale aproximadamente:', o: ['117', '124', '150', '350'], a: 1, v: { k: 'rgb', c: [200, 100, 50] },
+    why: '59.8 + 58.7 + 5.7 = 124.2. El verde pesa más porque el ojo humano es más sensible a él.' },
+  { l: 0, q: '¿Qué canal tiene mayor peso al convertir una imagen a escala de grises?', o: ['Rojo', 'Verde', 'Azul', 'Todos pesan igual'], a: 1,
+    why: 'El verde aporta el 58.7% de la luminancia percibida (estándar ITU-R BT.601).' },
+  { l: 0, q: 'Un sensor muestrea a fs = 1 000 Hz. ¿Cada cuánto toma una muestra?', o: ['1 s', '0.1 s', '1 ms', '1 µs'], a: 2,
+    why: 'Ts = 1/fs = 1/1 000 = 0.001 s. Un audio de CD toma 44 100 muestras por segundo.' },
+  // ---------- NIVEL 2 ----------
+  { l: 1, q: 'Un kernel 3 × 3 con todos sus pesos iguales a 1/9:', o: ['Detecta bordes', 'Suaviza y reduce ruido', 'Invierte la imagen', 'Aumenta el contraste'], a: 1,
+    v: { k: 'kernel', m: [['1/9', '1/9', '1/9'], ['1/9', '1/9', '1/9'], ['1/9', '1/9', '1/9']] },
+    why: 'Es un filtro de media: promedia los 9 vecinos. Como los pesos suman 1, conserva el brillo.' },
+  { l: 1, q: 'El filtro Sobel X responde con fuerza a:', o: ['Bordes verticales', 'Bordes horizontales', 'Zonas de color uniforme', 'Solo al ruido'], a: 0,
+    v: { k: 'kernel', m: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]] },
+    why: 'Calcula «derecha − izquierda»: detecta cambios horizontales de intensidad, es decir, bordes verticales.' },
+  { l: 1, q: 'Entrada de 32 × 32, kernel 5 × 5, sin padding y stride 1. ¿Tamaño de salida?', o: ['32 × 32', '30 × 30', '28 × 28', '27 × 27'], a: 2, v: { k: 'formula', t: 'salida = (N − k + 2p) / s + 1' },
+    why: 'Salida = (32 − 5 + 0)/1 + 1 = 28. Sin padding, la convolución «come» los bordes de la imagen.' },
+  { l: 1, q: 'Con fs = 100 Hz, la frecuencia máxima representable sin aliasing es:', o: ['100 Hz', '50 Hz', '200 Hz', '25 Hz'], a: 1,
+    why: 'Es el límite de Nyquist, fs/2. Por eso en los videos las ruedas a veces parecen girar al revés.' },
+  { l: 1, q: 'Con fs = 1 000 Hz y una ventana de N = 500 muestras, la resolución de la FFT es:', o: ['0.5 Hz', '1 Hz', '2 Hz', '500 Hz'], a: 2, v: { k: 'formula', t: 'Δf = fs / N' },
+    why: 'Δf = 1 000/500 = 2 Hz. Ventanas más largas dan mejor resolución, pero respuestas más lentas.' },
+  // ---------- NIVEL 3 ----------
+  { l: 2, q: 'En k-NN, si una característica está en 0–255 y otra en 0–1 sin escalar:', o: ['La de mayor rango domina la distancia', 'k-NN las ignora', 'El modelo mejora', 'Hay que usar k = 1'], a: 0,
+    why: 'La distancia euclidiana suma diferencias al cuadrado, así que siempre se estandariza antes de usar k-NN.' },
+  { l: 2, q: 'Con 99% de casos normales, un modelo que siempre predice «normal» tiene:', o: ['Exactitud 99% y recall 0%', 'Exactitud 50%', 'Recall 99%', 'Precisión 100% en la clase falla'], a: 0,
+    why: 'Con clases desbalanceadas la exactitud engaña: se revisan el recall, la precisión y el F1 de la clase minoritaria.' },
+  { l: 2, q: 'Para clasificar comandos de voz con una CNN 2D, el audio se transforma primero en:', o: ['Una imagen binaria', 'Un espectrograma', 'Un histograma de colores', 'Una matriz de correlaciones'], a: 1,
+    why: 'El espectrograma aplica la FFT en ventanas sucesivas y produce una «imagen» tiempo × frecuencia.' },
+  { l: 2, q: 'Normalizar todo el dataset ANTES de dividir en train y test provoca:', o: ['Mejor generalización', 'Fuga de información (data leakage)', 'Menos sobreajuste', 'Nada relevante'], a: 1,
+    why: 'El escalador debe ajustarse solo con train. Un Pipeline de scikit-learn lo hace automáticamente.' },
+  { l: 2, q: '¿Cuántos parámetros tiene una capa Conv2D con 16 filtros de 3 × 3 sobre una entrada RGB (con sesgo)?', o: ['144', '432', '448', '49 168'], a: 2, v: { k: 'formula', t: '(k × k × canales + 1) × filtros' },
+    why: '(3 × 3 × 3 + 1) × 16 = 448. Las convoluciones comparten pesos, por eso tienen muchos menos parámetros que una capa densa.' }
+];
+const AVATARS = ['🤖', '📷', '🧠', '🛰️', '🎧', '🔬'];
+const SHAPES = ['▲', '◆', '●', '■'];
+const TIME = 20;
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); window.scrollTo(0, 0); };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fmt = n => n.toLocaleString('es-PE');
+
+/* =====================================================================
+   SONIDO (Web Audio API, sin librerías)
+   ===================================================================== */
+let actx = null, muted = false;
+function audio() { if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } } if (actx && actx.state === 'suspended') actx.resume(); return actx; }
+function tone(freq, dur, type = 'sine', when = 0, gain = 0.15, slideTo = null) {
+  const c = audio(); if (!c || muted) return;
+  const t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+const SFX = {
+  click: () => tone(660, 0.07, 'square', 0, 0.06),
+  ok: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.16, 'triangle', i * 0.08, 0.18)); },
+  bad: () => { tone(300, 0.35, 'sawtooth', 0, 0.12, 120); },
+  tick: () => tone(1200, 0.04, 'square', 0, 0.04),
+  level: () => { [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.1, 0.16)); },
+  fanfare: () => { [[523, 0], [523, .15], [523, .3], [659, .45], [784, .75], [659, 1.0], [1047, 1.2]].forEach(([f, w]) => tone(f, 0.28, 'triangle', w, 0.18)); },
+  over: () => { [392, 330, 262, 196].forEach((f, i) => tone(f, 0.3, 'sine', i * 0.2, 0.15)); }
+};
+
+/* =====================================================================
+   CONFETI (HTML5 Canvas)
+   ===================================================================== */
+const fx = $('#fx'), fctx = fx.getContext('2d'); let parts = [], animOn = false;
+function sizeFx() { fx.width = innerWidth * devicePixelRatio; fx.height = innerHeight * devicePixelRatio; fctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); }
+sizeFx(); addEventListener('resize', sizeFx);
+function confetti(n = 90, x = innerWidth / 2, y = innerHeight * 0.35) {
+  const cols = ['#22d3ee', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#ffffff'];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 4 + Math.random() * 8;
+    parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 6, w: 6 + Math.random() * 6, h: 4 + Math.random() * 6, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], life: 120 + Math.random() * 60 });
+  }
+  if (!animOn) { animOn = true; requestAnimationFrame(loopFx); }
+}
+function loopFx() {
+  fctx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter(p => p.life > 0 && p.y < innerHeight + 40);
+  parts.forEach(p => {
+    p.vy += 0.25; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life--;
+    fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.r); fctx.globalAlpha = Math.min(1, p.life / 40);
+    fctx.fillStyle = p.c; fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); fctx.restore();
+  });
+  if (parts.length) requestAnimationFrame(loopFx); else { animOn = false; fctx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+function floatText(txt, el) {
+  const r = el.getBoundingClientRect(), d = document.createElement('div');
+  d.className = 'float'; d.textContent = txt; d.style.left = (r.left + r.width / 2 - 40) + 'px'; d.style.top = (r.top - 10) + 'px';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1000);
+}
+
+/* =====================================================================
+   ESTADO DEL JUEGO
+   ===================================================================== */
+let S = {};
+let avatar = AVATARS[0];
+let timerId = null, tLeft = TIME, answered = false, current = null;
+
+/* ---------- Pantalla de inicio ---------- */
+$('#avatars').innerHTML = AVATARS.map((a, i) => `<button class="avatar" aria-pressed="${i === 0}" aria-label="Avatar ${a}" data-a="${a}">${a}</button>`).join('');
+document.querySelectorAll('.avatar').forEach(b => b.addEventListener('click', () => {
+  SFX.click(); avatar = b.dataset.a;
+  document.querySelectorAll('.avatar').forEach(x => x.setAttribute('aria-pressed', x === b));
+}));
+$('#nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
+$('#btnStart').addEventListener('click', startGame);
+
+function startGame() {
+  const name = $('#nameIn').value.trim();
+  if (!name) { $('#nameErr').textContent = '✍️ Escribe tu nombre para empezar.'; $('#nameIn').focus(); SFX.bad(); return; }
+  $('#nameErr').textContent = ''; audio(); SFX.click();
+  S = { name, avatar, i: 0, score: 0, lives: 3, streak: 0, best: 0, hits: 0, used5050: false, fails: [], maxLevel: 0 };
+  showLevel(0);
+}
+
+/* ---------- Transición de nivel ---------- */
+function showLevel(l) {
+  const L = LEVELS[l]; S.maxLevel = Math.max(S.maxLevel, l);
+  $('#lvEmoji').textContent = L.emoji; $('#lvNum').textContent = `NIVEL ${l + 1} DE 3`;
+  $('#lvName').textContent = L.name; $('#lvDesc').textContent = L.desc;
+  show('sLevel'); SFX.level(); if (l > 0) confetti(70);
+  setTimeout(() => $('#btnGo').focus(), 50);
+}
+$('#btnGo').addEventListener('click', () => { SFX.click(); show('sGame'); renderQ(); });
+
+/* ---------- HUD ---------- */
+function renderHud() {
+  $('#hAv').textContent = S.avatar; $('#hName').textContent = S.name;
+  const lv = Q[S.i].l; $('#hLevel').textContent = `Nivel ${lv + 1} · ${LEVELS[lv].name}`;
+  $('#hScore').textContent = fmt(S.score);
+  const st = $('#hStreak'); st.textContent = S.streak >= 3 ? `🔥 Racha x2 · ${S.streak}` : `🔥 ${S.streak}`; st.classList.toggle('streak', S.streak >= 3);
+  $('#hHearts').innerHTML = [0, 1, 2].map(k => `<span class="${k < S.lives ? '' : 'heart-lost'}">❤️</span>`).join('');
+  $('#hHearts').setAttribute('aria-label', `Vidas: ${S.lives}`);
+  const inLv = Q.filter(q => q.l === lv), pos = inLv.indexOf(Q[S.i]) + 1;
+  $('#hCount').textContent = `Pregunta ${S.i + 1} de ${Q.length}`;
+  $('#hLvProg').textContent = `Nivel ${lv + 1}: ${pos}/${inLv.length}`;
+  $('#pBar').style.width = (S.i / Q.length * 100) + '%';
+  const b = $('#btn5050'); b.disabled = S.used5050; b.textContent = S.used5050 ? '🎯 usado' : '🎯 50/50';
+}
+
+/* ---------- Visual de la pregunta ---------- */
+function visualHTML(v) {
+  if (!v) return '';
+  if (v.k === 'scale') return `<div style="width:100%;max-width:460px"><div style="height:34px;border-radius:10px;border:1px solid var(--line);background:linear-gradient(90deg,#000,#fff)"></div><div style="display:flex;justify-content:space-between;font-weight:800;margin-top:4px" class="muted"><span>negro</span><span>¿?</span><span>blanco</span></div></div>`;
+  if (v.k === 'rgb') {
+    const [r, g, b] = v.c;
+    return `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center">
+      <div style="width:70px;height:70px;border-radius:14px;background:rgb(${r},${g},${b});border:2px solid #fff3"></div>
+      ${[['R', r, '#ef4444'], ['G', g, '#22c55e'], ['B', b, '#3b82f6']].map(([n, val, c]) => `<div class="mgrid"><div style="background:${c};color:#fff">${n}<br>${val}</div></div>`).join('')}
+      <span class="fred" style="font-size:2rem">→</span>
+      <div style="width:70px;height:70px;border-radius:14px;background:#555;border:2px dashed #fff8;display:grid;place-items:center;font-size:1.6rem">?</div></div>`;
+  }
+  if (v.k === 'kernel') {
+    const cell = x => {
+      const n = typeof x === 'number' ? x : 0.111;
+      const bg = n > 0 ? `rgba(34,211,238,${0.25 + Math.min(1, n / 2) * 0.55})` : n < 0 ? `rgba(244,114,182,${0.25 + Math.min(1, -n / 2) * 0.55})` : '#1a234a';
+      return `<div style="background:${bg}">${typeof x === 'number' ? String(x).replace('-', '−') : x}</div>`;
+    };
+    return `<div class="mgrid" style="grid-template-columns:repeat(3,auto)">${v.m.flat().map(cell).join('')}</div>`;
+  }
+  if (v.k === 'formula') return `<p class="fred" style="background:#0f1630;border:1px solid var(--line);border-radius:12px;padding:8px 16px;margin:0;color:var(--cyan);font-size:1.15rem">${v.t}</p>`;
+  return '';
+}
+
+/* ---------- Pregunta ---------- */
+function renderQ() {
+  answered = false;
+  const q = Q[S.i];
+  const order = shuffle([0, 1, 2, 3]);
+  current = { q, order, correctPos: order.indexOf(q.a) };
+  renderHud();
+  $('#qText').textContent = q.q;
+  $('#qVisual').innerHTML = visualHTML(q.v);
+  $('#opts').innerHTML = order.map((oi, p) => `<button class="opt o${p}" data-p="${p}"><span class="shape" aria-hidden="true">${SHAPES[p]}</span><span>${q.o[oi]}</span><span class="key" aria-hidden="true">${p + 1}</span></button>`).join('');
+  document.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answer(+b.dataset.p)));
+  startTimer();
+}
+
+/* ---------- Temporizador ---------- */
+function startTimer() {
+  clearInterval(timerId); tLeft = TIME; drawTimer();
+  timerId = setInterval(() => {
+    const before = Math.ceil(tLeft);
+    tLeft = Math.max(0, tLeft - 0.1); drawTimer();
+    if (Math.ceil(tLeft) !== before && tLeft <= 5 && tLeft > 0) SFX.tick();
+    if (tLeft <= 0) { clearInterval(timerId); answer(-1); }
+  }, 100);
+}
+function drawTimer() {
+  const r = tLeft / TIME, b = $('#tBar');
+  b.style.width = (r * 100) + '%';
+  b.style.background = r > 0.5 ? 'var(--green)' : r > 0.25 ? 'var(--yellow)' : 'var(--red)';
+  $('#tNum').textContent = Math.ceil(tLeft);
+}
+
+/* ---------- Comodín 50/50 ---------- */
+$('#btn5050').addEventListener('click', () => {
+  if (S.used5050 || answered) return;
+  S.used5050 = true; SFX.click();
+  const wrong = shuffle([0, 1, 2, 3].filter(p => p !== current.correctPos)).slice(0, 2);
+  wrong.forEach(p => { const b = document.querySelector(`.opt[data-p="${p}"]`); b.classList.add('gone'); b.disabled = true; });
+  renderHud();
+});
+
+/* ---------- Responder ---------- */
+function answer(p) {
+  if (answered) return; answered = true; clearInterval(timerId);
+  const q = current.q, ok = p === current.correctPos;
+  const btns = document.querySelectorAll('.opt');
+  btns.forEach(b => { b.disabled = true; const bp = +b.dataset.p; if (bp === current.correctPos) b.classList.add('right'); else if (bp === p) b.classList.add('wrong'); else b.classList.add('dim'); });
+  let pts = 0;
+  if (ok) {
+    S.streak++; S.best = Math.max(S.best, S.streak); S.hits++;
+    const bonus = Math.round(50 * tLeft / TIME), mult = S.streak >= 3 ? 2 : 1;
+    pts = (100 + bonus) * mult; S.score += pts;
+    SFX.ok(); const el = document.querySelector(`.opt[data-p="${p}"]`);
+    const r = el.getBoundingClientRect(); confetti(60, r.left + r.width / 2, r.top + r.height / 2); floatText(`+${pts}`, el);
+  } else {
+    S.streak = 0; S.lives--;
+    S.fails.push({ q: q.q, a: q.o[q.a], your: p >= 0 ? q.o[current.order[p]] : '⏰ sin respuesta' });
+    SFX.bad();
+  }
+  renderHud();
+  setTimeout(() => openModal(ok, p, pts), 650);
+}
+
+/* ---------- Modal ¿Sabías que…? ---------- */
+function openModal(ok, p, pts) {
+  const q = current.q;
+  $('#mHead').innerHTML = ok ? `<span style="color:var(--green)">✔ ¡Correcto!</span> <span style="color:var(--yellow)">+${pts}</span>${S.streak >= 3 ? ' 🔥' : ''}`
+    : p < 0 ? '<span style="color:var(--red)">⏰ ¡Se acabó el tiempo!</span>' : '<span style="color:var(--red)">✘ Casi…</span>';
+  $('#mAns').innerHTML = `Respuesta correcta: <span style="color:var(--cyan)">${q.o[q.a]}</span>${!ok ? ` · Te quedan ${S.lives} ${S.lives === 1 ? 'vida' : 'vidas'}` : ''}`;
+  $('#mWhy').textContent = q.why;
+  const last = S.lives <= 0 || S.i === Q.length - 1;
+  $('#btnNext').textContent = S.lives <= 0 ? 'Ver resultados ▶' : last ? '🏁 Ver resultados' : 'Continuar ▶';
+  $('#modal').classList.add('show'); setTimeout(() => $('#btnNext').focus(), 50);
+}
+$('#btnNext').addEventListener('click', next);
+function next() {
+  if (!$('#modal').classList.contains('show')) return;
+  $('#modal').classList.remove('show'); SFX.click();
+  if (S.lives <= 0) return endGame(false);
+  if (S.i === Q.length - 1) { S.i++; return endGame(true); }
+  const prevL = Q[S.i].l; S.i++;
+  if (Q[S.i].l !== prevL) showLevel(Q[S.i].l); else renderQ();
+}
+
+/* ---------- Teclado: 1–4 y Enter ---------- */
+document.addEventListener('keydown', e => {
+  if ($('#modal').classList.contains('show')) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); next(); } return; }
+  if ($('#sGame').classList.contains('active') && !answered && ['1', '2', '3', '4'].includes(e.key)) {
+    const b = document.querySelector(`.opt[data-p="${+e.key - 1}"]`); if (b && !b.disabled) answer(+e.key - 1);
+  }
+});
+
+/* ---------- Resultados ---------- */
+function badgeFor(hits) {
+  const pct = hits / Q.length;
+  if (pct >= 0.85) return ['🥇', 'Insignia de Oro: Ingeniero/a de Visión Computacional', 'var(--yellow)'];
+  if (pct >= 0.60) return ['🥈', 'Insignia de Plata: Analista de Señales', '#cbd5e1'];
+  return ['🥉', 'Insignia de Bronce: Aprendiz de Píxeles', '#f59e0b'];
+}
+function endGame(completed) {
+  clearInterval(timerId);
+  const [em, txt, col] = badgeFor(S.hits);
+  $('#eTop').textContent = completed ? '🏁 MISIÓN COMPLETADA' : '💥 GAME OVER';
+  $('#eTitle').textContent = completed ? `¡Bien hecho, ${S.name}!` : `¡Buen intento, ${S.name}!`;
+  $('#eAv').textContent = S.avatar; $('#eBadge').textContent = em;
+  $('#eBadgeTxt').textContent = txt; $('#eBadgeTxt').style.color = col;
+  $('#eScore').textContent = fmt(S.score); $('#eHits').textContent = `${S.hits}/${Q.length}`;
+  $('#eBest').textContent = `🔥 ${S.best}`;
+  $('#eLevel').textContent = `${S.maxLevel + 1} · ${LEVELS[S.maxLevel].name}`;
+  $('#eReview').innerHTML = S.fails.length
+    ? `<p class="fred" style="font-size:1.2rem;margin:0">📚 Para repasar (${S.fails.length})</p><ul class="review" style="padding:0;margin:6px 0 0">${S.fails.map(f => `<li><b>${f.q}</b><br><span style="color:var(--green)">✔ ${f.a}</span> · <span class="muted">Tu respuesta: ${f.your}</span></li>`).join('')}</ul>`
+    : '<p class="fred" style="text-align:center;color:var(--green);font-size:1.2rem;margin:0">🏆 ¡Cero errores! Respuestas perfectas.</p>';
+  $('#pBar').style.width = '100%';
+  show('sEnd');
+  if (completed) { SFX.fanfare(); confetti(160); setTimeout(() => confetti(120, innerWidth * 0.2, innerHeight * 0.4), 500); setTimeout(() => confetti(120, innerWidth * 0.8, innerHeight * 0.4), 900); }
+  else SFX.over();
+}
+$('#btnAgain').addEventListener('click', () => { SFX.click(); show('sStart'); setTimeout(() => $('#nameIn').focus(), 50); });
+$('#btnCopy').addEventListener('click', async () => {
+  const [em, txt] = badgeFor(S.hits);
+  const t = `${S.avatar} ${S.name} · Misión Visión · ${fmt(S.score)} pts · ${S.hits}/${Q.length} aciertos · Mejor racha 🔥${S.best} · ${em} ${txt}`;
+  try { await navigator.clipboard.writeText(t); } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (_) {} ta.remove();
+  }
+  const to = $('#toast'); to.style.display = 'block'; setTimeout(() => to.style.display = 'none', 1800);
+});
+
+/* ---------- Sonido on/off ---------- */
+$('#btnMute').addEventListener('click', () => { muted = !muted; $('#btnMute').textContent = muted ? '🔇' : '🔊'; $('#btnMute').setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar'); });
+</script>
+</body>
+</html>
